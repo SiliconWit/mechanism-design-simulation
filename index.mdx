@@ -1,0 +1,94 @@
+---
+title: "Mechanism Design and Simulation"
+description: "Hands-on experiments with interactive mechanism simulators. Analyze crank-slider, four-bar linkage, Geneva, and other planar mechanisms through structured lab exercises with data collection, Python analysis, and engineering design insights."
+contributors: "sam-macharia"
+pubDate: 2026-03-10
+tags: ["mechanism-design", "kinematics", "simulation", "mechanical-engineering", "crank-slider", "four-bar-linkage", "python", "data-analysis"]
+excerpt: "Run structured engineering experiments on interactive mechanism simulators. Collect kinematic data, analyze it with Python, and build real intuition for how mechanism geometry controls motion, force, and machine performance."
+heroImage: "https://cdn.siliconwit.com/product-development/2d-mechanisms-analyzer/crank-slider-mechanism-simulator.png"
+---
+
+import Copyright from '../../../../components/Copyright.astro';
+import TawkWidget from '../../../../components/TawkWidget.astro';
+import { Card, CardGrid, Badge, Steps } from '@astrojs/starlight/components';
+
+Every mechanical engineer learns mechanism equations, but few develop intuition for how parameter changes propagate through an entire kinematic chain. This course pairs interactive browser-based simulators with structured experiments that force you to predict, observe, measure, and analyze, closing the gap between textbook formulas and engineering judgment. #MechanismDesign #Kinematics #EngineeringSimulation
+
+## Why Simulator-Based Experiments?
+
+<CardGrid>
+  <Card title="See What Equations Hide" icon="open-book">
+    A crank-slider has 4 parameters that produce 7 output curves. No human holds all those relationships in their head. Simulators make them visible and explorable in seconds.
+  </Card>
+
+  <Card title="Break Things Safely" icon="warning">
+    Push a mechanism past its design limits, watch it fail geometrically, observe singularities and dead zones. Physical prototypes are expensive; simulator crashes are free.
+  </Card>
+
+  <Card title="Real Data, Real Analysis" icon="seti:python">
+    Export CSV data from every experiment, then process it with Python scripts provided in each lesson. Compute integrals, fit curves, compare configurations, all with real engineering data.
+  </Card>
+
+  <Card title="Professional Output" icon="document">
+    Generate lab reports, design specifications, and CAD models directly from your simulation parameters. Every experiment produces artifacts you can submit or use in design reviews.
+  </Card>
+</CardGrid>
+
+## Course Structure
+
+Each lesson follows a consistent lab workflow:
+
+<Steps>
+1. **Predict**
+   Before touching the simulator, calculate expected values by hand or estimate behavior from theory. Write down your predictions.
+
+2. **Simulate and Collect Data**
+   Run the experiment using the interactive simulator. Record measurements, export CSV files, capture plots.
+
+3. **Analyze with Python**
+   Use the provided scripts to process your data. Compare analytical predictions with simulation results. Quantify errors and identify their sources.
+
+4. **Design Insight**
+   Each experiment ends with a design question that connects the kinematic analysis to a real engineering decision: motor sizing, material selection, geometry optimization.
+</Steps>
+
+## Lessons
+
+<CardGrid>
+  <Card title="Lesson 1: Crank-Slider Mechanism Experiments" icon="star">
+    [Start here](./crank-slider-experiments). Eight structured experiments covering quick-return behavior, rod ratio effects, force analysis, breaking mechanisms, and dead center dynamics. Includes Python analysis scripts and self-checking expected results. Uses the [Crank-Slider Mechanism Simulator](/product-development/crank-slider-mechanism-simulator/).
+  </Card>
+</CardGrid>
+
+:::note[More lessons coming]
+Future lessons will cover four-bar linkages, Geneva mechanisms, scotch yokes, cam-followers, scissor lifts, and other planar mechanisms as their simulators are built.
+:::
+
+## Prerequisites
+
+<Badge text="Required" variant="danger" /> Basic trigonometry (sin, cos, atan2) and ability to read x-y plots
+
+<Badge text="Required" variant="danger" /> Python 3.x with NumPy and Matplotlib installed (for data analysis scripts)
+
+<Badge text="Helpful" variant="success" /> Introductory physics or dynamics (concepts of velocity, acceleration, force)
+
+<Badge text="Helpful" variant="success" /> Familiarity with CSV files and basic spreadsheet operations
+
+## Getting Started
+
+<Steps>
+1. **Open the simulator**
+   Each lesson links to its corresponding interactive simulator. No installation needed; it runs in your browser.
+
+2. **Read the experiment brief**
+   Each experiment states what to configure, what to measure, and what questions to answer.
+
+3. **Run experiments and export data**
+   Use the simulator's "Run Full Experiment" button and download CSV/PNG files as instructed.
+
+4. **Analyze with provided Python scripts**
+   Copy the Python code blocks from each experiment into your local environment. The scripts load your exported CSV and produce the required analysis.
+</Steps>
+
+<Copyright />
+<TawkWidget />
