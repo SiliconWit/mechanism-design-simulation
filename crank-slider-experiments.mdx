@@ -1,0 +1,561 @@
+---
+title: "Crank-Slider Mechanism Experiments"
+description: "Eight structured engineering experiments on the crank-slider mechanism. Covers quick-return, rod ratio effects, breaking mechanisms, dead center dynamics, force analysis, and parametric design. Includes Python analysis scripts and expected results."
+contributors: "sam-macharia"
+pubDate: 2026-03-12
+tags: ["crank-slider", "mechanism-design", "kinematics", "simulation", "python", "data-analysis", "mechanical-engineering"]
+excerpt: "Run eight hands-on experiments on a crank-slider mechanism simulator. Collect kinematic data, analyze it with Python, observe mechanism failure modes, and build engineering intuition that equations alone cannot provide."
+heroImage: "https://cdn.siliconwit.com/product-development/2d-mechanisms-analyzer/crank-slider-mechanism-simulator.png"
+---
+
+import TawkWidget from '../../../../components/TawkWidget.astro';
+import UniversalContentContributors from '../../../../components/UniversalContentContributors.astro';
+import InArticleAd from '../../../../components/InArticleAd.astro';
+import Copyright from '../../../../components/Copyright.astro';
+import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid, Badge, Steps, LinkButton } from '@astrojs/starlight/components';
+
+<UniversalContentContributors contributors={frontmatter.contributors} />
+
+You can memorize the crank-slider position equation and solve textbook problems perfectly, yet still be surprised by what happens when you change the offset from 0 to 20 mm. These experiments close that gap: you will predict, simulate, measure, and analyze, building the kind of intuition that separates someone who knows the formula from someone who understands the mechanism. #CrankSlider #MechanismDesign #EngineeringLab
+
+:::tip[What you need]
+Open the [Crank-Slider Mechanism Simulator](/product-development/crank-slider-mechanism-simulator/) in a separate browser tab. You will use it throughout all eight experiments. For data analysis, you need Python 3 with NumPy and Matplotlib.
+:::
+
+:::note[Related resources]
+Want to build a 3D model of this mechanism? See the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism) lesson in our FreeCAD course. For a feature overview of the simulator, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+:::
+
+## Experiment 1: Baseline Kinematic Profile
+
+**Objective:** Establish a reference dataset for the standard inline crank-slider and verify the position equation against the simulator.
+
+<Steps>
+1. **Configure the simulator**
+   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 60 RPM, slider force = 0 N.
+
+2. **Predict**
+   Before running the experiment, calculate by hand:
+   - Position at $\theta$ = 0 (TDC): $x = r + l$ = ?
+   - Position at $\theta$ = 180 (BDC): $x = l - r$ = ?
+   - Stroke length: TDC - BDC = ?
+   - Position at $\theta$ = 90: $x = \sqrt{l^2 - r^2}$ = ?
+
+3. **Run the experiment**
+   Click "Run Full Experiment". Record the values shown in the displacement summary panel (stroke length, max displacement, min displacement).
+
+4. **Export data**
+   Download the CSV file using the CSV download button.
+
+5. **Compare predictions with simulation**
+   Do your hand calculations match the simulator output?
+</Steps>
+
+### Data Collection Table
+
+| Parameter | Hand Calculation | Simulator Value | Error (%) |
+|-----------|-----------------|-----------------|-----------|
+| Position at TDC (mm) | | | |
+| Position at BDC (mm) | | | |
+| Stroke length (mm) | | | |
+| Position at 90 degrees (mm) | | | |
+
+### Python Analysis
+
+```python title="experiment_1_baseline.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load your exported CSV
+data = np.genfromtxt('your-exported-file.csv', delimiter=',', skip_header=1)
+theta = data[:, 0]  # degrees
+x = data[:, 1]      # displacement (mm)
+v = data[:, 2]      # velocity (mm/s)
+a = data[:, 3]      # acceleration (mm/s^2)
+
+# Analytical verification
+r, l, e = 50, 150, 0
+theta_rad = np.radians(theta)
+S = r * np.sin(theta_rad) - e
+x_analytical = r * np.cos(theta_rad) + np.sqrt(l**2 - S**2)
+
+# Plot comparison
+fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+
+axes[0].plot(theta, x, 'b-', label='Simulator', linewidth=2)
+axes[0].plot(theta, x_analytical, 'r--', label='Analytical', linewidth=1)
+axes[0].set_ylabel('Displacement (mm)')
+axes[0].legend()
+axes[0].set_title('Experiment 1: Baseline Kinematic Profile (r=50, l=150, e=0)')
+
+axes[1].plot(theta, v, 'g-', linewidth=2)
+axes[1].set_ylabel('Velocity (mm/s)')
+axes[1].axhline(y=0, color='k', linewidth=0.5)
+
+axes[2].plot(theta, a, 'r-', linewidth=2)
+axes[2].set_ylabel('Acceleration (mm/s^2)')
+axes[2].set_xlabel('Crank Angle (degrees)')
+axes[2].axhline(y=0, color='k', linewidth=0.5)
+
+plt.tight_layout()
+plt.savefig('experiment_1_results.png', dpi=150)
+plt.show()
+
+# Print verification
+print(f"Max displacement (TDC): {x.max():.2f} mm (expected: {r+l:.2f})")
+print(f"Min displacement (BDC): {x.min():.2f} mm (expected: {l-r:.2f})")
+print(f"Stroke: {x.max() - x.min():.2f} mm (expected: {2*r:.2f})")
+print(f"Max error: {np.max(np.abs(x - x_analytical)):.6f} mm")
+```
+
+### Expected Results
+
+- TDC position: 200.00 mm, BDC position: 100.00 mm, Stroke: 100.00 mm
+- Position at 90 degrees: 141.42 mm
+- Velocity is zero at TDC and BDC (dead centers), maximum near mid-stroke
+- Acceleration is maximum (negative) at TDC and maximum (positive) at BDC
+- Analytical and simulator values should match to at least 4 decimal places
+
+<InArticleAd />
+
+## Experiment 2: The Quick-Return Effect (Offset)
+
+**Objective:** Demonstrate how slider offset creates asymmetric motion and understand why this matters for machines like shapers and presses.
+
+<Steps>
+1. **Save baseline as Experiment A**
+   With the baseline settings (r=50, l=150, e=0, 60 RPM), click "Save as Experiment A".
+
+2. **Apply offset**
+   Change offset to e = 20 mm. Click "Run Full Experiment".
+
+3. **Observe the overlay**
+   Both configurations now appear on every chart. Note how the velocity profile becomes asymmetric.
+
+4. **Repeat with negative offset**
+   Clear Experiment A. Save the current (e=20) as Experiment A. Change to e = -20 mm. Run the experiment.
+
+5. **Switch to time domain**
+   Click the "Time (s)" button in the x-axis picker. Observe how the slider spends different amounts of time on the forward vs return stroke.
+</Steps>
+
+### Data Collection Table
+
+| Measurement | e = 0 mm | e = 20 mm | e = -20 mm |
+|-------------|----------|-----------|------------|
+| Max velocity (mm/s) | | | |
+| Min velocity (mm/s) | | | |
+| Time for forward stroke (s) | | | |
+| Time for return stroke (s) | | | |
+| Quick-return ratio | | | |
+
+### Python Analysis
+
+```python title="experiment_2_quick_return.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+r, l, rpm = 50, 150, 60
+omega = rpm * 2 * np.pi / 60
+theta = np.linspace(0, 360, 361)
+theta_rad = np.radians(theta)
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+
+for e, color, label in [(0, 'blue', 'e=0'), (20, 'red', 'e=20'), (-20, 'green', 'e=-20')]:
+    S = r * np.sin(theta_rad) - e
+    Q = np.sqrt(l**2 - S**2)
+    x = r * np.cos(theta_rad) + Q
+    v = -r * omega * (np.sin(theta_rad) + np.cos(theta_rad) * S / Q)
+
+    axes[0].plot(theta, x, color=color, label=label, linewidth=2)
+    axes[1].plot(theta, v, color=color, label=label, linewidth=2)
+
+axes[0].set_ylabel('Displacement (mm)')
+axes[0].legend()
+axes[0].set_title('Experiment 2: Quick-Return Effect')
+axes[1].set_ylabel('Velocity (mm/s)')
+axes[1].set_xlabel('Crank Angle (degrees)')
+axes[1].axhline(y=0, color='k', linewidth=0.5)
+axes[1].legend()
+
+plt.tight_layout()
+plt.savefig('experiment_2_quick_return.png', dpi=150)
+plt.show()
+```
+
+### Design Question
+
+A shaper machine needs the cutting stroke to be 1.5 times slower than the return stroke (quick-return ratio of 1.5). With r = 50 mm and l = 150 mm, what offset value would you need? Use the simulator to find it experimentally by adjusting e and checking the time-domain velocity plot.
+
+## Experiment 3: Rod-to-Crank Ratio and Smoothness
+
+**Objective:** Understand why real mechanisms use l/r ratios between 3 and 5, and what happens at extreme ratios.
+
+<Steps>
+1. **Low ratio (l/r = 2)**
+   Set r = 50 mm, l = 100 mm, e = 0 mm, 60 RPM. Run the experiment. Note the acceleration peaks and the rod angle range.
+
+2. **Save as Experiment A**
+
+3. **High ratio (l/r = 4)**
+   Set r = 50 mm, l = 200 mm. Run the experiment.
+
+4. **Compare the overlaid charts**
+   Focus on: acceleration magnitude, connecting rod angle range, and transmission angle minimum.
+
+5. **Try l/r = 1.5**
+   Set r = 50 mm, l = 75 mm. This is below the typical design range. Observe the extreme angles and acceleration spikes.
+</Steps>
+
+### Data Collection Table
+
+| Measurement | l/r = 1.5 | l/r = 2 | l/r = 3 | l/r = 4 |
+|-------------|-----------|---------|---------|---------|
+| Peak acceleration (mm/s^2) | | | | |
+| Max rod angle (degrees) | | | | |
+| Min transmission angle (degrees) | | | | |
+| Rod/crank warning? | | | | |
+
+### Python Analysis
+
+```python title="experiment_3_rod_ratio.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+r = 50
+ratios = [1.5, 2, 3, 4, 5]
+omega = 60 * 2 * np.pi / 60
+theta = np.linspace(0, 360, 361)
+theta_rad = np.radians(theta)
+
+fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
+
+for ratio in ratios:
+    l = r * ratio
+    sinT = np.sin(theta_rad)
+    cosT = np.cos(theta_rad)
+    S = r * sinT
+    Q = np.sqrt(l**2 - S**2)
+
+    # Acceleration
+    a = omega**2 * (-r * cosT + r * sinT * S / Q - r**2 * cosT**2 * l**2 / Q**3)
+
+    # Rod angle
+    rod_angle = np.degrees(np.arcsin(S / l))
+
+    # Transmission angle
+    trans_angle = np.degrees(np.arccos(Q / l))
+
+    axes[0].plot(theta, a, label=f'l/r={ratio}', linewidth=1.5)
+    axes[1].plot(theta, rod_angle, label=f'l/r={ratio}', linewidth=1.5)
+    axes[2].plot(theta, trans_angle, label=f'l/r={ratio}', linewidth=1.5)
+
+axes[0].set_ylabel('Acceleration (mm/s^2)')
+axes[0].set_title('Experiment 3: Effect of Rod-to-Crank Ratio')
+axes[0].legend(fontsize=8)
+axes[1].set_ylabel('Rod Angle (degrees)')
+axes[1].legend(fontsize=8)
+axes[2].set_ylabel('Transmission Angle (degrees)')
+axes[2].set_xlabel('Crank Angle (degrees)')
+axes[2].axhline(y=40, color='r', linestyle='--', linewidth=0.8, label='40 degree limit')
+axes[2].legend(fontsize=8)
+
+plt.tight_layout()
+plt.savefig('experiment_3_rod_ratio.png', dpi=150)
+plt.show()
+```
+
+### Expected Results
+
+- Higher l/r ratios produce smoother acceleration profiles (closer to pure sinusoidal)
+- At l/r = 1.5, the rod angle exceeds 40 degrees and the mechanism is impractical
+- The simulator should display a rod/crank warning at l/r below 2.0
+
+<InArticleAd />
+
+## Experiment 4: Breaking the Mechanism
+
+**Objective:** Find the geometric constraint that makes a crank-slider mechanism impossible, and observe the failure at the exact angle.
+
+<Steps>
+1. **Start with a working mechanism**
+   Set r = 50 mm, l = 150 mm, e = 0. Run the experiment. Everything works.
+
+2. **Gradually reduce the rod**
+   Change l to 100 mm (l = 2r, barely works). Run and observe.
+
+3. **Make l shorter than r**
+   Set l = 40 mm (l is less than r). Run the experiment.
+
+4. **Observe the animation**
+   Start the animation. At what angle does the mechanism stop working? The connecting rod is too short to reach the slider.
+
+5. **Add offset and test the constraint**
+   Set r = 50 mm, l = 80 mm, e = 30 mm. The constraint is l must be greater than or equal to r + |e|. Here 80 is less than 50 + 30 = 80. Test at exactly l = 80 and l = 79.
+</Steps>
+
+### Data Collection Table
+
+| Configuration | Works? | Fails at angle? | Constraint check (l vs r+|e|) |
+|---------------|--------|-----------------|-------------------------------|
+| r=50, l=150, e=0 | | | |
+| r=50, l=50, e=0 | | | |
+| r=50, l=40, e=0 | | | |
+| r=50, l=80, e=30 | | | |
+| r=50, l=79, e=30 | | | |
+
+### Analysis Question
+
+Derive the geometric constraint mathematically. Starting from the position equation:
+
+$$x = r\cos\theta + \sqrt{l^2 - (r\sin\theta - e)^2}$$
+
+For the mechanism to work at all angles, what must be true about the term under the square root? At what crank angle is the constraint most critical?
+
+### Expected Results
+
+- The constraint is $l \geq r + |e|$
+- Failure occurs when $r\sin\theta - e$ exceeds $l$ in magnitude
+- The critical angle is $\theta = 90$ degrees (for e = 0), where $r\sin\theta$ is maximized
+- With offset, the critical angle shifts
+
+## Experiment 5: Dead Centers and Mechanical Advantage
+
+**Objective:** Understand why dead centers are both dangerous and useful in mechanism design.
+
+<Steps>
+1. **Configure**
+   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 30 RPM (slow for observation), slider force = 500 N.
+
+2. **Run the experiment**
+   Focus on the mechanical advantage chart and the crank torque chart.
+
+3. **Observe the animation**
+   Start the animation at low speed. Enable the crank path (locus). Watch the slider crawl near TDC and BDC, then race through mid-stroke.
+
+4. **Pause at TDC (0 degrees)**
+   Use the manual angle control. Set to 0 degrees. Read the mechanical advantage value. What happens to crank torque?
+
+5. **Sweep through dead center**
+   Slowly move from 350 degrees to 10 degrees. Watch MA spike and torque pass through zero.
+</Steps>
+
+### Data Collection Table
+
+| Angle | Displacement (mm) | Velocity (mm/s) | MA | Torque (Nm) |
+|-------|-------------------|------------------|----|-------------|
+| 0 (TDC) | | | | |
+| 30 | | | | |
+| 60 | | | | |
+| 90 | | | | |
+| 120 | | | | |
+| 150 | | | | |
+| 180 (BDC) | | | | |
+
+### Design Question
+
+A coining press needs maximum force at the bottom of its stroke. Should the pressing action happen at TDC, BDC, or mid-stroke? Why? What does this tell you about where to position the workpiece relative to the dead center?
+
+<InArticleAd />
+
+## Experiment 6: Force Analysis and Motor Sizing
+
+**Objective:** Determine how slider force and speed affect crank torque, and understand why reciprocating machines need flywheels.
+
+<Steps>
+1. **Low force, low speed**
+   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 30 RPM, slider force = 200 N. Run the experiment. Note the peak crank torque.
+
+2. **Save as Experiment A**
+
+3. **Same force, higher speed**
+   Change speed to 120 RPM. Run the experiment. Compare the torque curves.
+
+4. **Higher force**
+   Clear Experiment A. Set F = 800 N, speed = 30 RPM. Save as Experiment A. Then set F = 800 N, speed = 120 RPM. Run and compare.
+
+5. **Export both CSVs**
+</Steps>
+
+### Python Analysis
+
+```python title="experiment_6_torque_analysis.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+r, l, e = 50, 150, 0
+F = 500  # N
+
+fig, ax = plt.subplots(figsize=(10, 5))
+
+for rpm, color in [(30, 'blue'), (60, 'green'), (120, 'red')]:
+    omega = rpm * 2 * np.pi / 60
+    theta = np.linspace(0, 360, 361)
+    theta_rad = np.radians(theta)
+    sinT = np.sin(theta_rad)
+    cosT = np.cos(theta_rad)
+    S = r * sinT - e
+    Q = np.sqrt(l**2 - S**2)
+
+    v = -r * omega * (sinT + cosT * S / Q)
+    torque = F * (v / 1000) / omega  # Nm
+
+    ax.plot(theta, torque, color=color, label=f'{rpm} RPM', linewidth=2)
+
+    # Energy per cycle = integral of |torque| * d_theta
+    energy = np.trapz(np.abs(torque), np.radians(theta))
+    print(f'{rpm} RPM: Peak torque = {np.max(np.abs(torque)):.4f} Nm, Energy/cycle = {energy:.4f} J')
+
+ax.set_xlabel('Crank Angle (degrees)')
+ax.set_ylabel('Crank Torque (Nm)')
+ax.set_title(f'Experiment 6: Crank Torque vs Speed (F={F}N, r={r}, l={l})')
+ax.axhline(y=0, color='k', linewidth=0.5)
+ax.legend()
+plt.tight_layout()
+plt.savefig('experiment_6_torque.png', dpi=150)
+plt.show()
+```
+
+### Design Question
+
+The torque curve shows large variations through the cycle. A motor delivering constant torque would alternately accelerate and decelerate the crank. How would you size a flywheel to smooth this out? The energy stored in a flywheel is $E = \frac{1}{2}I\omega^2$. From your torque data, estimate the energy fluctuation per cycle.
+
+## Experiment 7: Comparing Presets (Real Applications)
+
+**Objective:** Understand how the same mechanism serves different purposes by changing its proportions.
+
+<Steps>
+1. **IC Engine preset**
+   Select the IC Engine preset (r=40, l=160, e=0, 60 RPM, F=500 N). Run the experiment. Save as Experiment A.
+
+2. **Hydraulic Press preset**
+   Select the Hydraulic Press preset (r=60, l=180, e=10, 30 RPM, F=800 N). Run the experiment.
+
+3. **Compare the overlaid charts**
+   Note the differences in velocity profiles (symmetry vs asymmetry), acceleration peaks, and torque curves.
+
+4. **Air Compressor preset**
+   Clear Experiment A. Select Air Compressor (r=30, l=120, e=0, 90 RPM, F=200 N). Compare with the previous two.
+</Steps>
+
+### Data Collection Table
+
+| Measurement | IC Engine | Air Compressor | Hydraulic Press |
+|-------------|-----------|----------------|-----------------|
+| Stroke (mm) | | | |
+| l/r ratio | | | |
+| Peak velocity (mm/s) | | | |
+| Peak acceleration (mm/s^2) | | | |
+| Peak torque (Nm) | | | |
+| Quick-return ratio | | | |
+
+### Analysis Question
+
+Why does the hydraulic press have an offset but the IC engine doesn't? Think about what each machine optimizes for: the engine wants symmetric, balanced motion at high speed; the press wants asymmetric motion with a slow power stroke and fast return.
+
+<InArticleAd />
+
+## Experiment 8: Parametric Sensitivity Study
+
+**Objective:** Determine which parameter has the strongest effect on peak acceleration, a critical factor in mechanism design.
+
+<Steps>
+1. **Baseline**
+   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 60 RPM. Record peak acceleration.
+
+2. **Vary crank length**
+   Change r to 40, 50, 60, 70 mm (keep l = 150, e = 0, 60 RPM). Record peak acceleration for each.
+
+3. **Vary rod length**
+   Reset r = 50. Change l to 100, 125, 150, 175, 200 mm. Record peak acceleration for each.
+
+4. **Vary speed**
+   Reset l = 150. Change speed to 30, 60, 90, 120 RPM. Record peak acceleration for each.
+
+5. **Export all CSVs for analysis**
+</Steps>
+
+### Python Analysis
+
+```python title="experiment_8_sensitivity.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+theta = np.linspace(0, 360, 361)
+theta_rad = np.radians(theta)
+
+def peak_accel(r, l, e, rpm):
+    omega = rpm * 2 * np.pi / 60
+    sinT = np.sin(theta_rad)
+    cosT = np.cos(theta_rad)
+    S = r * sinT - e
+    Q = np.sqrt(l**2 - S**2)
+    a = omega**2 * (-r * cosT + r * sinT * S / Q - r**2 * cosT**2 * l**2 / Q**3)
+    return np.max(np.abs(a))
+
+# Sensitivity to crank length
+r_values = np.arange(20, 75, 5)
+a_r = [peak_accel(r, 150, 0, 60) for r in r_values]
+
+# Sensitivity to rod length
+l_values = np.arange(80, 220, 10)
+a_l = [peak_accel(50, l, 0, 60) for l in l_values]
+
+# Sensitivity to speed
+rpm_values = np.arange(20, 150, 10)
+a_rpm = [peak_accel(50, 150, 0, rpm) for rpm in rpm_values]
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+
+axes[0].plot(r_values, a_r, 'bo-')
+axes[0].set_xlabel('Crank Length r (mm)')
+axes[0].set_ylabel('Peak |Acceleration| (mm/s^2)')
+axes[0].set_title('Sensitivity to r')
+
+axes[1].plot(l_values, a_l, 'rs-')
+axes[1].set_xlabel('Rod Length l (mm)')
+axes[1].set_title('Sensitivity to l')
+
+axes[2].plot(rpm_values, a_rpm, 'g^-')
+axes[2].set_xlabel('Speed (RPM)')
+axes[2].set_title('Sensitivity to RPM')
+
+plt.suptitle('Experiment 8: Parametric Sensitivity of Peak Acceleration')
+plt.tight_layout()
+plt.savefig('experiment_8_sensitivity.png', dpi=150)
+plt.show()
+
+print("Key finding: acceleration scales with omega^2 (quadratic with speed)")
+print(f"Doubling speed from 60 to 120 RPM: {peak_accel(50,150,0,120)/peak_accel(50,150,0,60):.1f}x increase")
+```
+
+### Expected Results
+
+- Peak acceleration scales linearly with crank length r
+- Peak acceleration decreases with increasing rod length l (diminishing returns above l/r = 4)
+- Peak acceleration scales with the **square** of speed (doubling RPM quadruples peak acceleration)
+- Speed is the dominant parameter: this is why high-RPM engines face severe inertia loads
+
+### Design Question
+
+You are designing a mechanism that must keep peak acceleration below 5000 mm/s^2. Using your sensitivity data, what combinations of r, l, and RPM satisfy this constraint? Is there a single "best" design, or is it a trade-off?
+
+## Lab Report
+
+After completing all experiments, you can generate a professional lab report directly from the simulator:
+
+1. Configure the mechanism with your final experimental parameters
+2. Click "Run Full Experiment" to generate all analysis data
+3. Use the download section to get the design specification, CSV data, and lab report template
+4. The lab report template includes your specific parameter values, computed results, and figure placeholders
+
+For a complete discussion of the simulator's capabilities and downloadable resources, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) product page.
+
+To build a physical 3D model of the mechanism you analyzed, follow the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism) lesson using FreeCAD.
+
+<MechanismDesignSimulationComments />
+<Copyright />
+<TawkWidget />
