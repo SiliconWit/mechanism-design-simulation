@@ -66,6 +66,9 @@ flowchart LR
 
 ## Setting Up Your Workspace
 
+<InArticleAd />
+
+
 Before starting the experiments, create a project folder to keep your data and scripts organized:
 
 <FileTree>
@@ -107,6 +110,9 @@ Read values by hovering over the charts at the angles listed in each experiment'
 The Python scripts in each experiment can also generate analytical data independently, so you can compare your recorded readings against the exact mathematical solution.
 
 ## Experiment 1: Baseline Kinematic Profile
+
+<InArticleAd />
+
 
 Most students can solve $x = r\cos\theta + \sqrt{l^2 - r^2\sin^2\theta}$ on paper, but they are often surprised that the velocity is not sinusoidal and that the acceleration at TDC is significantly larger than at BDC. Without seeing the full 360-degree profile, you cannot appreciate the asymmetry that exists even in a zero-offset mechanism. This experiment builds the reference you will compare every other experiment against.
 
@@ -211,6 +217,7 @@ print(f"Peak acceleration: {np.max(np.abs(a)):.2f} mm/s^2")
 
 <InArticleAd />
 
+
 A shaper machine cuts metal on the forward stroke and returns the tool on the backward stroke. The return stroke does no useful work, so engineers want it to be faster: less idle time means higher productivity. But how do you make one direction faster than the other when the crank rotates at constant speed? The answer is offset. By shifting the slider path away from the crank pivot, the mechanism spends more crank rotation on one stroke than the other. This effect is invisible in the standard e=0 equation, and impossible to appreciate without seeing the velocity profiles side by side.
 
 :::note[Objective]
@@ -289,6 +296,7 @@ A shaper machine needs the cutting stroke to be 1.5 times slower than the return
 ## Experiment 3: Rod-to-Crank Ratio and Smoothness
 
 <InArticleAd />
+
 
 Every textbook states "use an l/r ratio between 3 and 5" as a design rule. But why? What actually goes wrong at l/r = 2 or l/r = 1.5? The answer involves three things happening simultaneously: acceleration spikes become severe (meaning higher inertia forces on bearings), the connecting rod swings through dangerously large angles (increasing side loads on the slider), and the transmission angle drops toward the zone where the mechanism jams under load. No single equation shows all three effects together. Only by sweeping the ratio and watching all the charts change at once can you see why the rule exists and where the real boundaries are.
 
@@ -383,6 +391,7 @@ plt.show()
 
 <InArticleAd />
 
+
 In a real workshop, building a mechanism with a connecting rod shorter than the crank would waste material, time, and possibly injure someone when it locks up mid-cycle. In the simulator, you can break mechanisms for free and learn exactly why they fail. This experiment shows you the geometric limit that every crank-slider must satisfy: the rod must be long enough to reach the slider at every crank angle. You will find the exact angle where the mechanism becomes impossible and derive the constraint from first principles. This is knowledge that prevents costly design errors before they reach the shop floor.
 
 :::note[Objective]
@@ -448,6 +457,7 @@ For the mechanism to work at all angles, what must be true about the term under 
 ## Experiment 5: Dead Centers and Mechanical Advantage
 
 <InArticleAd />
+
 
 At two specific positions in every crank-slider cycle, the slider velocity drops to zero and the mechanical advantage spikes toward infinity. These are the dead centers, and they are simultaneously the most dangerous and the most useful positions in the mechanism. Dangerous because the mechanism can stall if it stops exactly at a dead center (there is zero torque to restart it). Useful because machines like toggle clamps, coining presses, and injection molding machines are deliberately designed to do their work at dead center, where the force multiplication is highest. You cannot appreciate this duality from an equation; you need to watch the mechanism crawl near dead center and race through mid-stroke to feel the difference.
 
@@ -563,6 +573,7 @@ A coining press needs maximum force at the bottom of its stroke. Should the pres
 
 <InArticleAd />
 
+
 An electric motor delivers roughly constant torque. A crank-slider mechanism demands wildly varying torque through its cycle. This mismatch is the reason every reciprocating engine, compressor, and pump has a flywheel. But how big should that flywheel be? The answer depends on how much the torque varies, which depends on the slider force, the speed, and the geometry. Without computing the full torque curve and integrating the energy fluctuation, you are guessing at flywheel size. This experiment gives you the torque data to make that calculation properly.
 
 :::note[Objective]
@@ -632,6 +643,7 @@ The torque curve shows large variations through the cycle. A motor delivering co
 
 <InArticleAd />
 
+
 An IC engine, an air compressor, and a hydraulic press are all crank-slider mechanisms. Yet they look different, run at different speeds, and have different proportions. Why? Because each machine optimizes for something different: the engine wants smooth, balanced, high-speed motion; the compressor wants efficient compression at moderate speed; the press wants maximum force at low speed with a quick return. By overlaying their kinematic profiles on the same charts, you can see exactly how the same four parameters (r, l, e, speed) create three fundamentally different machines. This is design thinking: understanding which parameter serves which purpose.
 
 :::note[Objective]
@@ -673,6 +685,7 @@ Why does the hydraulic press have an offset but the IC engine doesn't? Think abo
 ## Experiment 8: Parametric Sensitivity Study
 
 <InArticleAd />
+
 
 When a mechanism fails in service, it is usually because the inertia forces exceeded what the bearings or connecting rod could handle. Peak acceleration is the single number that determines inertia loading. But which design parameter has the strongest effect on it? If you need to reduce peak acceleration by 50%, should you shorten the crank, lengthen the rod, or slow down the motor? The answer is not intuitive: acceleration scales with the *square* of speed, meaning that doubling the RPM quadruples the peak acceleration. This experiment quantifies the sensitivity to each parameter, giving you the data to make rational design trade-offs instead of guessing.
 
