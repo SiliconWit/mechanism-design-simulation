@@ -12,11 +12,18 @@ import TawkWidget from '../../../../components/TawkWidget.astro';
 import UniversalContentContributors from '../../../../components/UniversalContentContributors.astro';
 import InArticleAd from '../../../../components/InArticleAd.astro';
 import Copyright from '../../../../components/Copyright.astro';
-import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
+import BionicText from '../../../../components/BionicText.astro';
+import TailwindWrapper from '../../../../components/TailwindWrapper.jsx';
 import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid, Badge, Steps, LinkButton } from '@astrojs/starlight/components';
+import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/starlight/components';
 
-<UniversalContentContributors contributors={frontmatter.contributors} />
+<UniversalContentContributors 
+  contributors={frontmatter.contributors}
+/>
+
+
+
+import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
 You can memorize the crank-slider position equation and solve textbook problems perfectly, yet still be surprised by what happens when you change the offset from 0 to 20 mm. These experiments close that gap: you will predict, simulate, measure, and analyze, building the kind of intuition that separates someone who knows the formula from someone who understands the mechanism. #CrankSlider #MechanismDesign #EngineeringLab
 
@@ -46,8 +53,8 @@ Want to build a 3D model of this mechanism? See the [Slider Crank Mechanism Desi
 3. **Run the experiment**
    Click "Run Full Experiment". Record the values shown in the displacement summary panel (stroke length, max displacement, min displacement).
 
-4. **Export data**
-   Download the CSV file using the CSV download button.
+4. **Read from the charts**
+   Hover over the displacement plot to read values at specific angles. Record the position at 0, 90, 180, and 270 degrees.
 
 5. **Compare predictions with simulation**
    Do your hand calculations match the simulator output?
@@ -68,26 +75,31 @@ Want to build a 3D model of this mechanism? See the [Slider Crank Mechanism Desi
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Load your exported CSV
-data = np.genfromtxt('your-exported-file.csv', delimiter=',', skip_header=1)
-theta = data[:, 0]  # degrees
-x = data[:, 1]      # displacement (mm)
-v = data[:, 2]      # velocity (mm/s)
-a = data[:, 3]      # acceleration (mm/s^2)
-
-# Analytical verification
+# Parameters (match what you set in the simulator)
 r, l, e = 50, 150, 0
-theta_rad = np.radians(theta)
-S = r * np.sin(theta_rad) - e
-x_analytical = r * np.cos(theta_rad) + np.sqrt(l**2 - S**2)
+rpm = 60
+omega = rpm * 2 * np.pi / 60
 
-# Plot comparison
+# Generate analytical data
+theta = np.arange(0, 361)
+theta_rad = np.radians(theta)
+sinT = np.sin(theta_rad)
+cosT = np.cos(theta_rad)
+S = r * sinT - e
+Q = np.sqrt(l**2 - S**2)
+
+x = r * cosT + Q
+v = -r * omega * (sinT + cosT * S / Q)
+a_t1 = -r * cosT
+a_t2 = r * sinT * S / Q
+a_t3 = r**2 * cosT**2 * l**2 / Q**3
+a = omega**2 * (a_t1 + a_t2 - a_t3)
+
+# Plot all three kinematic profiles
 fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
 
-axes[0].plot(theta, x, 'b-', label='Simulator', linewidth=2)
-axes[0].plot(theta, x_analytical, 'r--', label='Analytical', linewidth=1)
+axes[0].plot(theta, x, 'b-', linewidth=2)
 axes[0].set_ylabel('Displacement (mm)')
-axes[0].legend()
 axes[0].set_title('Experiment 1: Baseline Kinematic Profile (r=50, l=150, e=0)')
 
 axes[1].plot(theta, v, 'g-', linewidth=2)
@@ -103,11 +115,13 @@ plt.tight_layout()
 plt.savefig('experiment_1_results.png', dpi=150)
 plt.show()
 
-# Print verification
-print(f"Max displacement (TDC): {x.max():.2f} mm (expected: {r+l:.2f})")
-print(f"Min displacement (BDC): {x.min():.2f} mm (expected: {l-r:.2f})")
-print(f"Stroke: {x.max() - x.min():.2f} mm (expected: {2*r:.2f})")
-print(f"Max error: {np.max(np.abs(x - x_analytical)):.6f} mm")
+# Print key values to compare with what you read from the simulator
+print(f"TDC position (0 deg): {x[0]:.2f} mm")
+print(f"BDC position (180 deg): {x[180]:.2f} mm")
+print(f"Stroke: {x.max() - x.min():.2f} mm")
+print(f"Position at 90 deg: {x[90]:.2f} mm")
+print(f"Peak velocity: {np.max(np.abs(v)):.2f} mm/s")
+print(f"Peak acceleration: {np.max(np.abs(a)):.2f} mm/s^2")
 ```
 
 ### Expected Results
@@ -118,9 +132,10 @@ print(f"Max error: {np.max(np.abs(x - x_analytical)):.6f} mm")
 - Acceleration is maximum (negative) at TDC and maximum (positive) at BDC
 - Analytical and simulator values should match to at least 4 decimal places
 
+## Experiment 2: The Quick-Return Effect (Offset)
+
 <InArticleAd />
 
-## Experiment 2: The Quick-Return Effect (Offset)
 
 **Objective:** Demonstrate how slider offset creates asymmetric motion and understand why this matters for machines like shapers and presses.
 
@@ -191,6 +206,9 @@ plt.show()
 A shaper machine needs the cutting stroke to be 1.5 times slower than the return stroke (quick-return ratio of 1.5). With r = 50 mm and l = 150 mm, what offset value would you need? Use the simulator to find it experimentally by adjusting e and checking the time-domain velocity plot.
 
 ## Experiment 3: Rod-to-Crank Ratio and Smoothness
+
+<InArticleAd />
+
 
 **Objective:** Understand why real mechanisms use l/r ratios between 3 and 5, and what happens at extreme ratios.
 
@@ -274,9 +292,10 @@ plt.show()
 - At l/r = 1.5, the rod angle exceeds 40 degrees and the mechanism is impractical
 - The simulator should display a rod/crank warning at l/r below 2.0
 
+## Experiment 4: Breaking the Mechanism
+
 <InArticleAd />
 
-## Experiment 4: Breaking the Mechanism
 
 **Objective:** Find the geometric constraint that makes a crank-slider mechanism impossible, and observe the failure at the exact angle.
 
@@ -324,6 +343,9 @@ For the mechanism to work at all angles, what must be true about the term under 
 
 ## Experiment 5: Dead Centers and Mechanical Advantage
 
+<InArticleAd />
+
+
 **Objective:** Understand why dead centers are both dangerous and useful in mechanism design.
 
 <Steps>
@@ -359,9 +381,10 @@ For the mechanism to work at all angles, what must be true about the term under 
 
 A coining press needs maximum force at the bottom of its stroke. Should the pressing action happen at TDC, BDC, or mid-stroke? Why? What does this tell you about where to position the workpiece relative to the dead center?
 
+## Experiment 6: Force Analysis and Motor Sizing
+
 <InArticleAd />
 
-## Experiment 6: Force Analysis and Motor Sizing
 
 **Objective:** Determine how slider force and speed affect crank torque, and understand why reciprocating machines need flywheels.
 
@@ -377,7 +400,8 @@ A coining press needs maximum force at the bottom of its stroke. Should the pres
 4. **Higher force**
    Clear Experiment A. Set F = 800 N, speed = 30 RPM. Save as Experiment A. Then set F = 800 N, speed = 120 RPM. Run and compare.
 
-5. **Export both CSVs**
+5. **Record your data**
+   Fill in the data collection table below by reading values from the chart summary panels. Save your recordings as a CSV file (columns: configuration, max_velocity, min_velocity, peak_torque) for Python analysis.
 </Steps>
 
 ### Python Analysis
@@ -425,6 +449,9 @@ The torque curve shows large variations through the cycle. A motor delivering co
 
 ## Experiment 7: Comparing Presets (Real Applications)
 
+<InArticleAd />
+
+
 **Objective:** Understand how the same mechanism serves different purposes by changing its proportions.
 
 <Steps>
@@ -456,9 +483,10 @@ The torque curve shows large variations through the cycle. A motor delivering co
 
 Why does the hydraulic press have an offset but the IC engine doesn't? Think about what each machine optimizes for: the engine wants symmetric, balanced motion at high speed; the press wants asymmetric motion with a slow power stroke and fast return.
 
+## Experiment 8: Parametric Sensitivity Study
+
 <InArticleAd />
 
-## Experiment 8: Parametric Sensitivity Study
 
 **Objective:** Determine which parameter has the strongest effect on peak acceleration, a critical factor in mechanism design.
 
@@ -475,7 +503,8 @@ Why does the hydraulic press have an offset but the IC engine doesn't? Think abo
 4. **Vary speed**
    Reset l = 150. Change speed to 30, 60, 90, 120 RPM. Record peak acceleration for each.
 
-5. **Export all CSVs for analysis**
+5. **Record your data**
+   For each configuration, read the peak acceleration from the summary panel and record it in the table below. Save as a CSV file (columns: parameter_name, value, peak_acceleration) for the Python analysis.
 </Steps>
 
 ### Python Analysis
@@ -543,19 +572,29 @@ print(f"Doubling speed from 60 to 120 RPM: {peak_accel(50,150,0,120)/peak_accel(
 
 You are designing a mechanism that must keep peak acceleration below 5000 mm/s^2. Using your sensitivity data, what combinations of r, l, and RPM satisfy this constraint? Is there a single "best" design, or is it a trade-off?
 
-## Lab Report
+## Writing Your Lab Report
 
-After completing all experiments, you can generate a professional lab report directly from the simulator:
+<InArticleAd />
 
-1. Configure the mechanism with your final experimental parameters
-2. Click "Run Full Experiment" to generate all analysis data
-3. Use the download section to get the design specification, CSV data, and lab report template
-4. The lab report template includes your specific parameter values, computed results, and figure placeholders
 
-For a complete discussion of the simulator's capabilities and downloadable resources, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) product page.
+After completing all experiments, compile your findings into a lab report:
+
+1. State the objective of each experiment and the parameters you used
+2. Present your data collection tables with the values you recorded from the simulator
+3. Include the plots generated by the Python scripts as figures
+4. For each experiment, compare your hand-calculated predictions with the simulator values and discuss any discrepancies
+5. Answer the design questions, referencing specific data from your experiments
+
+The simulator also includes a downloadable report template and design specification in the downloads section, which can serve as a starting point.
+
+For a complete discussion of the simulator's capabilities, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) product page.
 
 To build a physical 3D model of the mechanism you analyzed, follow the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism) lesson using FreeCAD.
 
 <MechanismDesignSimulationComments />
-<Copyright />
+
+
+
+<InArticleAd />
 <TawkWidget />
+<Copyright />
