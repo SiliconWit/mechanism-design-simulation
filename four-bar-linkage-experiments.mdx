@@ -17,7 +17,7 @@ import TailwindWrapper from '../../../../components/TailwindWrapper.jsx';
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/starlight/components';
 
-<UniversalContentContributors
+<UniversalContentContributors 
   contributors={frontmatter.contributors}
 />
 
@@ -65,6 +65,9 @@ flowchart LR
 
 ## Setting Up Your Workspace
 
+<InArticleAd />
+
+
 <FileTree>
 - four-bar-lab/
   - data/
@@ -89,6 +92,7 @@ For each experiment, read values from the simulator's charts and summary panels.
 ## Experiment 1: The Grashof Condition
 
 <InArticleAd />
+
 
 Every four-bar linkage falls into one of two categories: Grashof (at least one link can fully rotate) or non-Grashof (no link can complete a full turn). This single classification determines whether a mechanism can be used as a crank input or only as a rocker. The Grashof inequality is simple math, but watching a mechanism transition from rotatable to locked is something no equation can convey. You will build four configurations, predict their classification, and verify against the simulator.
 
@@ -154,6 +158,7 @@ for cfg in configs:
 
 <InArticleAd />
 
+
 A mechanism can satisfy the Grashof condition and still be useless if the transmission angle drops too low. The transmission angle determines how effectively force is transmitted from input to output. Below about 40 degrees, friction and compliance dominate, and the mechanism feels "dead." This experiment quantifies where the transmission angle problems occur and how link proportions control them.
 
 :::note[Objective]
@@ -184,6 +189,72 @@ Map how transmission angle varies through the cycle for different link ratios, a
 | a=40, b=120, c=40, d=100 | | | |
 | a=30, b=100, c=90, d=100 | | | |
 
+### Python Analysis
+
+```python title="experiment_2_transmission.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+def solve_fourbar(a, b, c, d, theta2_deg):
+    t2 = np.radians(theta2_deg)
+    K1, K2 = d/a, d/c
+    K3 = (a**2 - b**2 + c**2 + d**2) / (2*a*c)
+    A = np.cos(t2) - K1 - K2*np.cos(t2) + K3
+    B = -2*np.sin(t2)
+    C = K1 - (1+K2)*np.cos(t2) + K3
+    disc = B**2 - 4*A*C
+    if disc < 0: return None, None
+    t4 = 2*np.arctan2(-B - np.sqrt(disc), 2*A)
+    K4, K5 = d/b, (c**2-d**2-a**2-b**2)/(2*a*b)
+    A3 = np.cos(t2) - K1 + K4*np.cos(t2) + K5
+    B3 = -2*np.sin(t2)
+    C3 = K1 + (K4-1)*np.cos(t2) + K5
+    disc3 = B3**2 - 4*A3*C3
+    if disc3 < 0: return None, None
+    t3 = 2*np.arctan2(-B3 - np.sqrt(disc3), 2*A3)
+    return np.degrees(t3), np.degrees(t4)
+
+def transmission_angle(t3, t4):
+    mu = abs(t3 - t4)
+    while mu > 180: mu -= 180
+    if mu > 90: mu = 180 - mu
+    return mu
+
+configs = [
+    {'a': 40, 'b': 120, 'c': 80, 'd': 100, 'label': 'Baseline'},
+    {'a': 40, 'b': 120, 'c': 40, 'd': 100, 'label': 'Short follower'},
+    {'a': 30, 'b': 100, 'c': 90, 'd': 100, 'label': 'Improved'},
+]
+
+theta2 = np.arange(0, 361)
+fig, ax = plt.subplots(figsize=(10, 5))
+
+for cfg in configs:
+    mu_arr = []
+    for t in theta2:
+        t3, t4 = solve_fourbar(cfg['a'], cfg['b'], cfg['c'], cfg['d'], t)
+        mu_arr.append(transmission_angle(t3, t4) if t3 is not None else np.nan)
+    mu_arr = np.array(mu_arr)
+    ax.plot(theta2, mu_arr, label=cfg['label'], linewidth=2)
+    valid = mu_arr[~np.isnan(mu_arr)]
+    print(f"{cfg['label']}: min mu = {np.nanmin(mu_arr):.1f}, max mu = {np.nanmax(mu_arr):.1f}")
+
+ax.axhline(y=40, color='r', linestyle='--', alpha=0.5, label='40 deg limit')
+ax.set_xlabel('Input Angle (degrees)')
+ax.set_ylabel('Transmission Angle (degrees)')
+ax.set_title('Experiment 2: Transmission Angle Comparison')
+ax.legend()
+plt.tight_layout()
+plt.savefig('experiment_2_transmission.png', dpi=150)
+plt.show()
+```
+
+### Expected Results
+
+- Baseline (a=40, b=120, c=80, d=100): transmission angle stays well above 40 degrees
+- Short follower (c=40): transmission angle dips significantly, potentially below the 40-degree limit
+- Improved (a=30, b=100, c=90, d=100): more uniform transmission angle through the cycle
+
 ### Design Question
 
 You are designing a mechanism for a packaging machine that must transmit force reliably at all positions. What minimum transmission angle would you require? How would you adjust link lengths to achieve it?
@@ -191,6 +262,7 @@ You are designing a mechanism for a packaging machine that must transmit force r
 ## Experiment 3: Comparing the Four Presets
 
 <InArticleAd />
+
 
 A crank-rocker, a double-crank, a double-rocker, and a parallelogram are all four-bar linkages. But they behave completely differently. By overlaying their angular velocity profiles, you can see why each type is suited to different applications: crank-rockers for oscillating output, double-cranks for speed ratio control, parallelograms for parallel motion (like bus doors and drafting machines).
 
@@ -286,6 +358,7 @@ plt.show()
 
 <InArticleAd />
 
+
 Every four-bar linkage has two valid assembly configurations for the same link lengths: open and crossed. Most textbooks mention this in passing, but the difference is dramatic. The same physical links produce completely different motion, different transmission angles, and different velocity profiles depending on which circuit you use. The simulator lets you switch between them instantly.
 
 :::note[Objective]
@@ -307,9 +380,61 @@ Compare the open and crossed assembly configurations for the same link lengths, 
 
 In what situations would an engineer deliberately choose the crossed circuit over the open circuit?
 
+### Python Analysis
+
+```python title="experiment_4_circuits.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+a, b, c, d = 40, 120, 80, 100
+K1, K2 = d/a, d/c
+K3 = (a**2 - b**2 + c**2 + d**2) / (2*a*c)
+
+theta2 = np.arange(0, 361)
+fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+for circuit, label, color in [('open', 'Open', 'blue'), ('crossed', 'Crossed', 'red')]:
+    t4_arr = []
+    for t in theta2:
+        t2 = np.radians(t)
+        A = np.cos(t2) - K1 - K2*np.cos(t2) + K3
+        B = -2*np.sin(t2)
+        C = K1 - (1+K2)*np.cos(t2) + K3
+        disc = B**2 - 4*A*C
+        if disc < 0:
+            t4_arr.append(np.nan)
+            continue
+        if circuit == 'open':
+            t4 = 2*np.arctan2(-B - np.sqrt(disc), 2*A)
+        else:
+            t4 = 2*np.arctan2(-B + np.sqrt(disc), 2*A)
+        t4_arr.append(np.degrees(t4))
+
+    t4_arr = np.array(t4_arr)
+    axes[0].plot(theta2, t4_arr, color=color, label=label, linewidth=2)
+    valid = t4_arr[~np.isnan(t4_arr)]
+    if len(valid) > 0:
+        print(f"{label}: theta4 range = {np.nanmin(t4_arr):.1f} to {np.nanmax(t4_arr):.1f}")
+
+axes[0].set_ylabel('Follower Angle (deg)')
+axes[0].set_title('Experiment 4: Open vs Crossed Circuit')
+axes[0].legend()
+axes[1].set_xlabel('Input Angle (deg)')
+plt.tight_layout()
+plt.savefig('experiment_4_circuits.png', dpi=150)
+plt.show()
+```
+
+### Expected Results
+
+- The open and crossed circuits produce completely different theta4 profiles for the same link lengths
+- One circuit typically has better transmission angle than the other
+- The crossed circuit may have the follower rotating in the opposite sense
+
 ## Experiment 5: Coupler Curve Exploration
 
 <InArticleAd />
+
 
 The coupler curve is perhaps the most powerful and least appreciated feature of the four-bar linkage. The path traced by a point on the coupler can approximate straight lines, circles, figure-eights, and complex shapes depending on the link proportions and point location. This is how mechanisms generate complex output motion from simple rotary input, without gears or cams.
 
@@ -329,11 +454,79 @@ Observe how link proportions change the coupler curve shape, and identify config
 
 4. **Observe and sketch**
    For each configuration, observe the coupler curve shape and note whether any portion approximates a straight line.
+
+5. **Collect data**
+   For each configuration, note the coupler curve shape (circle, ellipse, figure-eight, kidney, or other) and whether any segment is approximately straight. Save observations as `data/exp5_coupler.csv`.
 </Steps>
+
+### Python Analysis
+
+```python title="experiment_5_coupler.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+def solve_fourbar(a, b, c, d, theta2_deg):
+    t2 = np.radians(theta2_deg)
+    K1, K2 = d/a, d/c
+    K3 = (a**2 - b**2 + c**2 + d**2) / (2*a*c)
+    K4, K5 = d/b, (c**2-d**2-a**2-b**2)/(2*a*b)
+    A = np.cos(t2) - K1 - K2*np.cos(t2) + K3
+    B = -2*np.sin(t2)
+    C = K1 - (1+K2)*np.cos(t2) + K3
+    disc = B**2 - 4*A*C
+    if disc < 0: return None
+    t4 = 2*np.arctan2(-B - np.sqrt(disc), 2*A)
+    A3 = np.cos(t2) - K1 + K4*np.cos(t2) + K5
+    B3 = -2*np.sin(t2)
+    C3 = K1 + (K4-1)*np.cos(t2) + K5
+    disc3 = B3**2 - 4*A3*C3
+    if disc3 < 0: return None
+    t3 = 2*np.arctan2(-B3 - np.sqrt(disc3), 2*A3)
+    Ax = a*np.cos(t2)
+    Ay = a*np.sin(t2)
+    Bx = d + c*np.cos(t4)
+    By = c*np.sin(t4)
+    return {'Ax': Ax, 'Ay': Ay, 'Bx': Bx, 'By': By, 't3': t3}
+
+configs = [
+    {'a': 40, 'b': 120, 'c': 80, 'd': 100, 'name': 'Crank-Rocker'},
+    {'a': 30, 'b': 150, 'c': 100, 'd': 100, 'name': 'Long coupler'},
+    {'a': 60, 'b': 100, 'c': 60, 'd': 100, 'name': 'Parallelogram'},
+]
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+theta2 = np.arange(0, 361)
+
+for idx, cfg in enumerate(configs):
+    mx, my = [], []
+    for t in theta2:
+        r = solve_fourbar(cfg['a'], cfg['b'], cfg['c'], cfg['d'], t)
+        if r is None: continue
+        mx.append((r['Ax'] + r['Bx']) / 2)
+        my.append((r['Ay'] + r['By']) / 2)
+    axes[idx].plot(mx, my, 'purple', linewidth=2)
+    axes[idx].set_aspect('equal')
+    axes[idx].set_title(cfg['name'])
+    axes[idx].set_xlabel('X (mm)')
+    axes[idx].set_ylabel('Y (mm)')
+    axes[idx].grid(True, alpha=0.3)
+
+plt.suptitle('Experiment 5: Coupler Midpoint Curves')
+plt.tight_layout()
+plt.savefig('experiment_5_coupler.png', dpi=150)
+plt.show()
+```
+
+### Expected Results
+
+- Crank-rocker: oval or kidney-shaped coupler curve
+- Long coupler: more elongated curve, potentially with a near-straight segment
+- Parallelogram: perfect circle (because the coupler translates without rotating)
 
 ## Experiment 6: Parametric Sensitivity
 
 <InArticleAd />
+
 
 When designing a four-bar linkage, you need to know which dimensions matter most. If manufacturing tolerance on the ground link is tight but the coupler can vary, do you care? This experiment quantifies how sensitive the follower oscillation range and minimum transmission angle are to each link length, giving you the data to set rational tolerances.
 
@@ -423,6 +616,7 @@ plt.show()
 
 <InArticleAd />
 
+
 After completing all experiments, compile your findings:
 
 1. State the objective and parameters for each experiment
@@ -436,6 +630,8 @@ The simulator also includes a downloadable report template and design specificat
 For a complete discussion of the simulator's capabilities, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
 
 <MechanismDesignSimulationComments />
+
+
 
 <InArticleAd />
 <TawkWidget />
