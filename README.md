@@ -14,13 +14,14 @@ sidebar:
 
 **Read this course at:** [https://siliconwit.com/education/mechanism-design-simulation/](https://siliconwit.com/education/mechanism-design-simulation/)
 
-Hands-on engineering experiments using interactive browser-based mechanism simulators. Each lesson provides structured lab exercises with data collection, Python analysis scripts, and design insight questions. Covers crank-slider mechanisms, with future lessons planned for four-bar linkages, Geneva mechanisms, and other planar mechanisms.
+Hands-on engineering experiments using interactive browser-based mechanism simulators. Each lesson provides structured lab exercises with data collection, Python analysis scripts, and design insight questions.
 
 ## Lessons
 
 | # | Title | Simulator |
 |---|-------|-----------|
-| 1 | Crank-Slider Mechanism Experiments | [Crank-Slider Simulator](https://siliconwit.com/product-development/crank-slider-mechanism-simulator/) |
+| 1 | Crank-Slider Mechanism Experiments (8 experiments) | [Crank-Slider Simulator](https://siliconwit.com/product-development/crank-slider-mechanism-simulator/) |
+| 2 | Four-Bar Linkage Experiments (6 experiments) | [Four-Bar Linkage Simulator](https://siliconwit.com/product-development/four-bar-linkage-simulator/) |
 
 ## File Structure
 
@@ -28,6 +29,7 @@ Hands-on engineering experiments using interactive browser-based mechanism simul
 mechanism-design-simulation/
 ├── index.mdx
 ├── crank-slider-experiments.mdx
+├── four-bar-linkage-experiments.mdx
 └── README.md
 ```
 
