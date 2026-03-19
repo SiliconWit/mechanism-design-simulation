@@ -154,6 +154,10 @@ for cfg in configs:
 - a=60, b=120, c=80, d=100: Change-point (s+l=180 = p+q), mechanism reaches singular positions
 - a=20, b=80, c=60, d=50: Grashof double-crank (shortest link is ground)
 
+### Design Question
+
+You need a mechanism where the input crank makes full rotations but the output oscillates. Which link must be the shortest? What happens if manufacturing errors make one link 2mm longer than specified, pushing s+l past the boundary?
+
 ## Experiment 2: Transmission Angle and Mechanism Quality
 
 <InArticleAd />
@@ -354,6 +358,17 @@ plt.savefig('experiment_3_presets.png', dpi=150)
 plt.show()
 ```
 
+### Expected Results
+
+- Crank-rocker: follower oscillates over a limited range (typically 40-80 degrees)
+- Double-crank: both links rotate fully, follower angle covers 360 degrees
+- Double-rocker: neither input nor output completes full rotation, both oscillate
+- Parallelogram: follower angle tracks input angle exactly (constant velocity ratio of 1)
+
+### Analysis Question
+
+A windshield wiper needs oscillating output from a rotating motor. Which preset matches this requirement? A conveyor belt needs both sprockets to rotate continuously. Which preset fits? What makes the parallelogram special for applications like bus doors and drafting machines?
+
 ## Experiment 4: Open vs Crossed Circuit
 
 <InArticleAd />
@@ -373,8 +388,15 @@ Compare the open and crossed assembly configurations for the same link lengths, 
    Change the assembly configuration to "Crossed". Run the experiment. Compare the overlay, especially the transmission angle.
 
 3. **Collect data**
-   Record theta4 range and min transmission angle for each circuit. Save as `data/exp4_circuits.csv`.
+   Record theta4 range and min transmission angle for each circuit. Save as `data/exp4_circuits.csv`. Alternatively, download the CSV from the simulator for each configuration.
 </Steps>
+
+### Data Collection Table
+
+| Circuit | &theta;&sub4; min | &theta;&sub4; max | Oscillation | Min &mu; |
+|---------|----------|----------|-------------|----------|
+| Open | | | | |
+| Crossed | | | | |
 
 ### Design Question
 
@@ -523,6 +545,10 @@ plt.show()
 - Long coupler: more elongated curve, potentially with a near-straight segment
 - Parallelogram: perfect circle (because the coupler translates without rotating)
 
+### Design Question
+
+A packaging machine needs a mechanism that moves a part in an approximately straight line over a 50mm segment. Could you achieve this with a four-bar linkage? Which link proportions would you try, and how would you verify straightness from the coupler curve?
+
 ## Experiment 6: Parametric Sensitivity
 
 <InArticleAd />
@@ -611,6 +637,198 @@ plt.show()
 - Follower oscillation is most sensitive to input crank length (a): longer crank = wider oscillation
 - Coupler length (b) has moderate effect: longer coupler smooths the motion
 - Ground length (d) changes the Grashof classification boundary, causing abrupt behavior changes
+
+### Design Question
+
+Your mechanism has a=40mm with a manufacturing tolerance of plus or minus 1mm. At what nominal Grashof margin (p+q minus s+l) should you design to guarantee the mechanism always satisfies the Grashof condition despite tolerance variations?
+
+## Experiment 7: Angular Acceleration and Inertia Forces
+
+<InArticleAd />
+
+Angular acceleration determines the inertia torques on each link and the dynamic forces at the joints. High accelerations mean high bearing loads, vibration, and noise. In high-speed mechanisms (textile machines, printing presses), controlling angular acceleration is as important as controlling the position. This experiment reveals where the acceleration spikes occur and how link proportions control their magnitude.
+
+:::note[Objective]
+Map the angular acceleration profiles of the coupler and follower, identify the peak values, and understand how they relate to inertia forces in the mechanism.
+:::
+
+<Steps>
+1. **Baseline**
+   Use the crank-rocker preset (a=40, b=120, c=80, d=100, 60 RPM). Run the experiment. Note the follower angular velocity profile shape.
+
+2. **Predict**
+   At what input angles do you expect the follower angular velocity to be zero? (These are the points where acceleration is highest, because the follower reverses direction.)
+
+3. **Increase speed**
+   Change speed to 120 RPM. Run the experiment. Save as Experiment A. Then change back to 60 RPM and run. Compare the overlay.
+
+4. **Collect data**
+   Record the peak omega4 values at both speeds. Note: angular acceleration scales with the square of speed (like crank-slider). Save as `data/exp7_acceleration.csv`. Alternatively, download the CSV from the simulator.
+</Steps>
+
+### Data Collection Table
+
+| Configuration | Max omega4 (rad/s) | Max omega3 (rad/s) | Follower reversal angles |
+|---------------|-------------------|-------------------|------------------------|
+| 60 RPM | | | |
+| 120 RPM | | | |
+
+### Python Analysis
+
+```python title="experiment_7_acceleration.py"
+import numpy as np
+import matplotlib.pyplot as plt
+
+def solve_fourbar(a, b, c, d, theta2_deg):
+    t2 = np.radians(theta2_deg)
+    K1, K2 = d/a, d/c
+    K3 = (a**2 - b**2 + c**2 + d**2) / (2*a*c)
+    K4, K5 = d/b, (c**2-d**2-a**2-b**2)/(2*a*b)
+    A = np.cos(t2) - K1 - K2*np.cos(t2) + K3
+    B = -2*np.sin(t2)
+    C = K1 - (1+K2)*np.cos(t2) + K3
+    disc = B**2 - 4*A*C
+    if disc < 0: return None, None
+    t4 = 2*np.arctan2(-B - np.sqrt(disc), 2*A)
+    A3 = np.cos(t2) - K1 + K4*np.cos(t2) + K5
+    B3 = -2*np.sin(t2)
+    C3 = K1 + (K4-1)*np.cos(t2) + K5
+    disc3 = B3**2 - 4*A3*C3
+    if disc3 < 0: return None, None
+    t3 = 2*np.arctan2(-B3 - np.sqrt(disc3), 2*A3)
+    return t3, t4
+
+a, b, c, d = 40, 120, 80, 100
+theta2 = np.arange(0, 361)
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+for rpm, color, label in [(60, 'blue', '60 RPM'), (120, 'red', '120 RPM')]:
+    omega2 = rpm * 2 * np.pi / 60
+    omega4_arr = []
+    for t in theta2:
+        t3, t4 = solve_fourbar(a, b, c, d, t)
+        if t3 is None:
+            omega4_arr.append(np.nan)
+            continue
+        sin34 = np.sin(t3 - t4)
+        if abs(sin34) < 1e-10:
+            omega4_arr.append(np.nan)
+            continue
+        omega4 = a * omega2 * np.sin(np.radians(t) - t3) / (c * sin34)
+        omega4_arr.append(omega4)
+
+    omega4_arr = np.array(omega4_arr)
+    axes[0].plot(theta2, omega4_arr, color=color, label=label, linewidth=2)
+
+    valid = omega4_arr[~np.isnan(omega4_arr)]
+    print(f"{label}: peak |omega4| = {np.nanmax(np.abs(omega4_arr)):.3f} rad/s")
+
+axes[0].set_ylabel('Follower omega4 (rad/s)')
+axes[0].set_title('Experiment 7: Angular Velocity at Different Speeds')
+axes[0].legend()
+axes[0].axhline(y=0, color='k', linewidth=0.5)
+axes[1].set_xlabel('Input Angle (degrees)')
+
+plt.tight_layout()
+plt.savefig('experiment_7_acceleration.png', dpi=150)
+plt.show()
+
+ratio = 120/60
+print(f"Speed ratio: {ratio}x -> omega4 ratio should be {ratio}x (linear)")
+```
+
+### Expected Results
+
+- Follower angular velocity doubles when input speed doubles (linear relationship)
+- Angular acceleration quadruples when input speed doubles (quadratic, same as crank-slider)
+- Follower reversal points (omega4 = 0) occur at the same input angles regardless of speed
+- Peak omega4 occurs near the midpoint of the follower oscillation
+
+### Design Question
+
+A mechanism runs at 300 RPM. You measure that the follower angular acceleration causes a peak joint force of 500N at 60 RPM. What will the peak joint force be at 300 RPM? (Hint: inertia force scales with angular acceleration, which scales with omega squared.)
+
+## Experiment 8: Breaking the Mechanism
+
+<InArticleAd />
+
+Just as a crank-slider breaks when the rod is too short, a four-bar linkage breaks when the link lengths violate the closure condition. But unlike the crank-slider's simple constraint (l must be at least r + abs(e)), the four-bar has a more subtle failure: the mechanism can exist at some angles but not others, creating "dead zones" where the linkage locks. This experiment maps where those dead zones appear and how close to the boundary a working mechanism can get.
+
+:::note[Objective]
+Find the geometric constraints that determine whether a four-bar linkage can assemble, and observe partial-rotation failure modes.
+:::
+
+<Steps>
+1. **Working mechanism**
+   Set a=40, b=120, c=80, d=100. Run the experiment. All 361 data points should be valid.
+
+2. **Increase the crank**
+   Change a=90. The sum s+l now exceeds p+q. Start the animation. At what angle does it stop?
+
+3. **Extreme case**
+   Set a=120, b=40, c=80, d=100. The "crank" is now longer than the coupler. Try to animate.
+
+4. **Triangle inequality**
+   Set a=200, b=30, c=30, d=100. No valid assembly exists at any angle because the links cannot form a closed chain.
+
+5. **Collect data**
+   For each configuration, record how many valid positions exist (out of 361) and the angles where the mechanism fails. Save as `data/exp8_breaking.csv`. Alternatively, download the CSV to see which rows have zero values.
+</Steps>
+
+### Data Collection Table
+
+| Configuration | Valid positions (out of 361) | Fails at angles? | s+l vs p+q |
+|---------------|-------|-----------------|------------|
+| a=40, b=120, c=80, d=100 | | | |
+| a=90, b=120, c=80, d=100 | | | |
+| a=120, b=40, c=80, d=100 | | | |
+| a=200, b=30, c=30, d=100 | | | |
+
+### Python Analysis
+
+```python title="experiment_8_breaking.py"
+import numpy as np
+
+def can_assemble(a, b, c, d, theta2_deg):
+    t2 = np.radians(theta2_deg)
+    K1, K2 = d/a, d/c
+    K3 = (a**2 - b**2 + c**2 + d**2) / (2*a*c)
+    A = np.cos(t2) - K1 - K2*np.cos(t2) + K3
+    B = -2*np.sin(t2)
+    C = K1 - (1+K2)*np.cos(t2) + K3
+    return B**2 - 4*A*C >= 0
+
+configs = [
+    (40, 120, 80, 100),
+    (90, 120, 80, 100),
+    (120, 40, 80, 100),
+    (200, 30, 30, 100),
+]
+
+for a, b, c, d in configs:
+    links = sorted([a, b, c, d])
+    spl = links[0] + links[3]
+    ppq = links[1] + links[2]
+    valid = sum(1 for t in range(361) if can_assemble(a, b, c, d, t))
+    fail_start = None
+    for t in range(361):
+        if not can_assemble(a, b, c, d, t):
+            fail_start = t
+            break
+    print(f"a={a}, b={b}, c={c}, d={d}: s+l={spl}, p+q={ppq}, valid={valid}/361, first fail={fail_start}")
+```
+
+### Expected Results
+
+- a=40: all 361 positions valid (Grashof, s+l=160 < p+q=180)
+- a=90: partial failure, mechanism locks at angles where the chain cannot close
+- a=120: severe failure, very few valid positions
+- a=200: no valid positions at all (links cannot reach each other)
+
+### Design Question
+
+What is the maximum input crank length that still allows full rotation if b=120, c=80, d=100? Calculate it from the Grashof condition and verify with the simulator.
 
 ## Writing Your Lab Report
 
