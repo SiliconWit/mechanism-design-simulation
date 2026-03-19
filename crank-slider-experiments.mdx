@@ -93,21 +93,19 @@ Before starting the experiments, create a project folder to keep your data and s
 
 ### How to Record Data
 
-For each experiment, you will read values from the simulator's charts and summary panels, then save them as a CSV file. You can create these CSV files in any text editor or spreadsheet application.
+For each experiment, you have two options to collect data:
 
-**Example:** For Experiment 1, create `data/exp1_baseline.csv` with the values you read:
+1. **Download CSV from the simulator** (recommended): The simulator's download section provides a complete CSV with 361 data points and 8 variables per row. This is the most accurate and complete dataset.
+
+2. **Record from charts**: Read values by hovering over the charts at specific angles, then save as a CSV file matching the simulator's column format:
 
 ```text title="data/exp1_baseline.csv"
-angle_deg,displacement_mm,velocity_mm_s,acceleration_mm_s2
-0,200.00,0.00,-2631.89
-30,186.60,-200.12,-1975.43
-60,153.45,-298.77,-450.21
-90,141.42,-314.16,697.89
+Crank Angle (deg),Displacement (mm),Velocity (mm/s),Acceleration (mm/s²),Mechanical Advantage,Rod Angle (deg),Transmission Angle (deg),Crank Torque (N*m)
+0,200.00,0.00,-2631.89,0.0000,0.00,90.00,0.0000
+30,186.60,-200.12,-1975.43,0.0265,9.59,80.41,-1.0530
 ```
 
-Read values by hovering over the charts at the angles listed in each experiment's data collection table. Alternatively, you can download a complete CSV dataset from the simulator's download section.
-
-The Python scripts in each experiment can also generate analytical data independently, so you can compare your recorded readings against the exact mathematical solution.
+The Python scripts load simulator CSV data and overlay it against analytical computations, so you can verify the simulator's accuracy and catch any discrepancies.
 
 ## Experiment 1: Baseline Kinematic Profile
 
@@ -155,13 +153,33 @@ Verify the position equation against the simulator and observe the velocity/acce
 ```python title="experiment_1_baseline.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
-# Parameters (match what you set in the simulator)
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# Download CSV from the simulator or record values from charts
+# ============================================================
+csv_file = 'data/exp1_baseline.csv'
+sim_data = None
+
+if os.path.exists(csv_file):
+    with open(csv_file) as f:
+        sim_data = list(csv.DictReader(f))
+    print(f"Loaded {len(sim_data)} rows from {csv_file}")
+else:
+    print(f"No CSV found at {csv_file}. Using analytical data only.")
+    print("To use simulator data: download CSV from the simulator or")
+    print("record values from the charts into a CSV with columns:")
+    print("Crank Angle (deg), Displacement (mm), Velocity (mm/s), Acceleration (mm/s²)")
+
+# ============================================================
+# STEP 2: Analytical computation
+# ============================================================
 r, l, e = 50, 150, 0
 rpm = 60
 omega = rpm * 2 * np.pi / 60
 
-# Generate analytical data
 theta = np.arange(0, 361)
 theta_rad = np.radians(theta)
 sinT = np.sin(theta_rad)
@@ -169,40 +187,56 @@ cosT = np.cos(theta_rad)
 S = r * sinT - e
 Q = np.sqrt(l**2 - S**2)
 
-x = r * cosT + Q
-v = -r * omega * (sinT + cosT * S / Q)
-a_t1 = -r * cosT
-a_t2 = r * sinT * S / Q
-a_t3 = r**2 * cosT**2 * l**2 / Q**3
-a = omega**2 * (a_t1 + a_t2 - a_t3)
+x_anal = r * cosT + Q
+v_anal = -r * omega * (sinT + cosT * S / Q)
+a_anal = omega**2 * (-r*cosT + r*sinT*S/Q - r**2*cosT**2*l**2/Q**3)
 
-# Plot all three kinematic profiles
+# ============================================================
+# STEP 3: Plot simulator data vs analytical
+# ============================================================
 fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
 
-axes[0].plot(theta, x, 'b-', linewidth=2)
+if sim_data:
+    sim_angles = [float(row['Crank Angle (deg)']) for row in sim_data]
+    sim_x = [float(row['Displacement (mm)']) for row in sim_data]
+    sim_v = [float(row['Velocity (mm/s)']) for row in sim_data]
+    sim_a = [float(row['Acceleration (mm/s²)']) for row in sim_data]
+
+    axes[0].plot(sim_angles, sim_x, 'b-', label='Simulator', linewidth=2)
+    axes[0].plot(theta, x_anal, 'r--', label='Analytical', linewidth=1)
+    axes[1].plot(sim_angles, sim_v, 'g-', label='Simulator', linewidth=2)
+    axes[1].plot(theta, v_anal, 'r--', label='Analytical', linewidth=1)
+    axes[2].plot(sim_angles, sim_a, 'r-', label='Simulator', linewidth=2)
+    axes[2].plot(theta, a_anal, 'b--', label='Analytical', linewidth=1)
+    for ax in axes: ax.legend(fontsize=8)
+
+    # Error report
+    common = min(len(sim_x), len(x_anal))
+    x_err = [abs(s - a) for s, a in zip(sim_x[:common], x_anal[:common])]
+    v_err = [abs(s - a) for s, a in zip(sim_v[:common], v_anal[:common])]
+    print(f"\nDisplacement: max error = {max(x_err):.4f} mm")
+    print(f"Velocity: max error = {max(v_err):.4f} mm/s")
+else:
+    axes[0].plot(theta, x_anal, 'b-', linewidth=2)
+    axes[1].plot(theta, v_anal, 'g-', linewidth=2)
+    axes[2].plot(theta, a_anal, 'r-', linewidth=2)
+
 axes[0].set_ylabel('Displacement (mm)')
 axes[0].set_title('Experiment 1: Baseline Kinematic Profile (r=50, l=150, e=0)')
-
-axes[1].plot(theta, v, 'g-', linewidth=2)
 axes[1].set_ylabel('Velocity (mm/s)')
 axes[1].axhline(y=0, color='k', linewidth=0.5)
-
-axes[2].plot(theta, a, 'r-', linewidth=2)
 axes[2].set_ylabel('Acceleration (mm/s^2)')
 axes[2].set_xlabel('Crank Angle (degrees)')
 axes[2].axhline(y=0, color='k', linewidth=0.5)
 
 plt.tight_layout()
-plt.savefig('experiment_1_results.png', dpi=150)
+plt.savefig('plots/experiment_1_results.png', dpi=150)
 plt.show()
 
-# Print key values to compare with what you read from the simulator
-print(f"TDC position (0 deg): {x[0]:.2f} mm")
-print(f"BDC position (180 deg): {x[180]:.2f} mm")
-print(f"Stroke: {x.max() - x.min():.2f} mm")
-print(f"Position at 90 deg: {x[90]:.2f} mm")
-print(f"Peak velocity: {np.max(np.abs(v)):.2f} mm/s")
-print(f"Peak acceleration: {np.max(np.abs(a)):.2f} mm/s^2")
+print(f"\nTDC position (0 deg): {x_anal[0]:.2f} mm")
+print(f"BDC position (180 deg): {x_anal[180]:.2f} mm")
+print(f"Stroke: {x_anal.max() - x_anal.min():.2f} mm")
+print(f"Position at 90 deg: {x_anal[90]:.2f} mm")
 ```
 
 ### Expected Results
@@ -259,33 +293,77 @@ Observe how offset creates asymmetric motion and quantify the quick-return ratio
 ```python title="experiment_2_quick_return.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# Run at e=0, e=20, e=-20, download CSV for each
+# ============================================================
+csv_files = {
+    'e=0': 'data/exp2_e0.csv',
+    'e=20': 'data/exp2_e20.csv',
+    'e=-20': 'data/exp2_e-20.csv',
+}
+sim_datasets = {}
+for label, path in csv_files.items():
+    if os.path.exists(path):
+        with open(path) as f:
+            sim_datasets[label] = list(csv.DictReader(f))
+        print(f"Loaded {len(sim_datasets[label])} rows for {label}")
+    else:
+        print(f"No CSV at {path} (analytical only for {label})")
+
+# ============================================================
+# STEP 2: Analytical computation
+# ============================================================
 r, l, rpm = 50, 150, 60
 omega = rpm * 2 * np.pi / 60
-theta = np.linspace(0, 360, 361)
+theta = np.arange(0, 361)
 theta_rad = np.radians(theta)
 
+# ============================================================
+# STEP 3: Plot simulator data vs analytical
+# ============================================================
 fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
 for e, color, label in [(0, 'blue', 'e=0'), (20, 'red', 'e=20'), (-20, 'green', 'e=-20')]:
     S = r * np.sin(theta_rad) - e
     Q = np.sqrt(l**2 - S**2)
-    x = r * np.cos(theta_rad) + Q
-    v = -r * omega * (np.sin(theta_rad) + np.cos(theta_rad) * S / Q)
+    x_anal = r * np.cos(theta_rad) + Q
+    v_anal = -r * omega * (np.sin(theta_rad) + np.cos(theta_rad) * S / Q)
 
-    axes[0].plot(theta, x, color=color, label=label, linewidth=2)
-    axes[1].plot(theta, v, color=color, label=label, linewidth=2)
+    if label in sim_datasets:
+        sim = sim_datasets[label]
+        sim_angles = [float(row['Crank Angle (deg)']) for row in sim]
+        sim_x = [float(row['Displacement (mm)']) for row in sim]
+        sim_v = [float(row['Velocity (mm/s)']) for row in sim]
+        axes[0].plot(sim_angles, sim_x, '-', color=color,
+                     label=f'{label} (sim)', linewidth=2)
+        axes[0].plot(theta, x_anal, '--', color=color,
+                     label=f'{label} (anal)', linewidth=1, alpha=0.6)
+        axes[1].plot(sim_angles, sim_v, '-', color=color,
+                     label=f'{label} (sim)', linewidth=2)
+        axes[1].plot(theta, v_anal, '--', color=color,
+                     label=f'{label} (anal)', linewidth=1, alpha=0.6)
+        # Quick-return: max vs min velocity magnitude
+        vmax = max(sim_v)
+        vmin = min(sim_v)
+        print(f"{label}: max v = {vmax:.2f}, min v = {vmin:.2f}, ratio = {abs(vmin/vmax):.3f}")
+    else:
+        axes[0].plot(theta, x_anal, color=color, label=label, linewidth=2)
+        axes[1].plot(theta, v_anal, color=color, label=label, linewidth=2)
 
 axes[0].set_ylabel('Displacement (mm)')
-axes[0].legend()
+axes[0].legend(fontsize=8)
 axes[0].set_title('Experiment 2: Quick-Return Effect')
 axes[1].set_ylabel('Velocity (mm/s)')
 axes[1].set_xlabel('Crank Angle (degrees)')
 axes[1].axhline(y=0, color='k', linewidth=0.5)
-axes[1].legend()
+axes[1].legend(fontsize=8)
 
 plt.tight_layout()
-plt.savefig('experiment_2_quick_return.png', dpi=150)
+plt.savefig('plots/experiment_2_quick_return.png', dpi=150)
 plt.show()
 ```
 
@@ -337,34 +415,72 @@ Discover why real mechanisms use l/r between 3 and 5 by observing the simultaneo
 ```python title="experiment_3_rod_ratio.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# Run at l/r = 1.5, 2, 3, 4 (r=50), download CSV for each
+# ============================================================
+csv_files = {
+    1.5: 'data/exp3_ratio_1.5.csv',
+    2: 'data/exp3_ratio_2.csv',
+    3: 'data/exp3_ratio_3.csv',
+    4: 'data/exp3_ratio_4.csv',
+}
+sim_datasets = {}
+for ratio, path in csv_files.items():
+    if os.path.exists(path):
+        with open(path) as f:
+            sim_datasets[ratio] = list(csv.DictReader(f))
+        print(f"Loaded {len(sim_datasets[ratio])} rows for l/r={ratio}")
+    else:
+        print(f"No CSV at {path} (analytical only for l/r={ratio})")
+
+# ============================================================
+# STEP 2: Analytical computation
+# ============================================================
 r = 50
-ratios = [1.5, 2, 3, 4, 5]
 omega = 60 * 2 * np.pi / 60
-theta = np.linspace(0, 360, 361)
+theta = np.arange(0, 361)
 theta_rad = np.radians(theta)
+ratios = [1.5, 2, 3, 4, 5]
 
+# ============================================================
+# STEP 3: Plot simulator data vs analytical
+# ============================================================
 fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
+colors = ['red', 'orange', 'blue', 'green', 'purple']
 
-for ratio in ratios:
+for i, ratio in enumerate(ratios):
     l = r * ratio
     sinT = np.sin(theta_rad)
     cosT = np.cos(theta_rad)
     S = r * sinT
     Q = np.sqrt(l**2 - S**2)
+    a_anal = omega**2 * (-r*cosT + r*sinT*S/Q - r**2*cosT**2*l**2/Q**3)
+    rod_anal = np.degrees(np.arcsin(S / l))
+    trans_anal = np.degrees(np.arccos(np.clip(Q / l, -1, 1)))
 
-    # Acceleration
-    a = omega**2 * (-r * cosT + r * sinT * S / Q - r**2 * cosT**2 * l**2 / Q**3)
-
-    # Rod angle
-    rod_angle = np.degrees(np.arcsin(S / l))
-
-    # Transmission angle
-    trans_angle = np.degrees(np.arccos(Q / l))
-
-    axes[0].plot(theta, a, label=f'l/r={ratio}', linewidth=1.5)
-    axes[1].plot(theta, rod_angle, label=f'l/r={ratio}', linewidth=1.5)
-    axes[2].plot(theta, trans_angle, label=f'l/r={ratio}', linewidth=1.5)
+    label = f'l/r={ratio}'
+    if ratio in sim_datasets:
+        sim = sim_datasets[ratio]
+        sim_angles = [float(row['Crank Angle (deg)']) for row in sim]
+        sim_accel = [float(row['Acceleration (mm/s²)']) for row in sim]
+        sim_rod = [float(row['Rod Angle (deg)']) for row in sim]
+        sim_trans = [float(row['Transmission Angle (deg)']) for row in sim]
+        axes[0].plot(sim_angles, sim_accel, '-', color=colors[i],
+                     label=f'{label} (sim)', linewidth=2)
+        axes[0].plot(theta, a_anal, '--', color=colors[i], linewidth=1, alpha=0.5)
+        axes[1].plot(sim_angles, sim_rod, '-', color=colors[i],
+                     label=f'{label} (sim)', linewidth=2)
+        axes[2].plot(sim_angles, sim_trans, '-', color=colors[i],
+                     label=f'{label} (sim)', linewidth=2)
+        print(f"l/r={ratio}: peak accel (sim) = {max(abs(a) for a in sim_accel):.1f} mm/s^2")
+    else:
+        axes[0].plot(theta, a_anal, color=colors[i], label=label, linewidth=1.5)
+        axes[1].plot(theta, rod_anal, color=colors[i], label=label, linewidth=1.5)
+        axes[2].plot(theta, trans_anal, color=colors[i], label=label, linewidth=1.5)
 
 axes[0].set_ylabel('Acceleration (mm/s^2)')
 axes[0].set_title('Experiment 3: Effect of Rod-to-Crank Ratio')
@@ -373,11 +489,11 @@ axes[1].set_ylabel('Rod Angle (degrees)')
 axes[1].legend(fontsize=8)
 axes[2].set_ylabel('Transmission Angle (degrees)')
 axes[2].set_xlabel('Crank Angle (degrees)')
-axes[2].axhline(y=40, color='r', linestyle='--', linewidth=0.8, label='40 degree limit')
+axes[2].axhline(y=40, color='r', linestyle='--', linewidth=0.8, label='40 deg limit')
 axes[2].legend(fontsize=8)
 
 plt.tight_layout()
-plt.savefig('experiment_3_rod_ratio.png', dpi=150)
+plt.savefig('plots/experiment_3_rod_ratio.png', dpi=150)
 plt.show()
 ```
 
@@ -514,7 +630,24 @@ At dead centers, the crank and connecting rod become collinear:
 ```python title="experiment_5_dead_centers.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# ============================================================
+csv_file = 'data/exp5_dead_centers.csv'
+sim_data = None
+if os.path.exists(csv_file):
+    with open(csv_file) as f:
+        sim_data = list(csv.DictReader(f))
+    print(f"Loaded {len(sim_data)} rows from {csv_file}")
+else:
+    print(f"No CSV at {csv_file}. Using analytical data only.")
+
+# ============================================================
+# STEP 2: Analytical computation
+# ============================================================
 r, l, e = 50, 150, 0
 rpm = 30
 omega = rpm * 2 * np.pi / 60
@@ -527,42 +660,52 @@ cosT = np.cos(theta_rad)
 S = r * sinT - e
 Q = np.sqrt(l**2 - S**2)
 
-x = r * cosT + Q
-v = -r * omega * (sinT + cosT * S / Q)
+x_anal = r * cosT + Q
+v_anal = -r * omega * (sinT + cosT * S / Q)
 dxdtheta = r * (sinT + cosT * S / Q)
-ma = np.where(np.abs(dxdtheta) > 0.001, 1 / np.abs(dxdtheta), 0)
-torque = F * (v / 1000) / omega
+ma_anal = np.where(np.abs(dxdtheta) > 0.001, 1 / np.abs(dxdtheta), 0)
+torque_anal = F * (v_anal / 1000) / omega
 
+# ============================================================
+# STEP 3: Plot simulator data vs analytical
+# ============================================================
 fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
 
-axes[0].plot(theta, v, 'g-', linewidth=2)
+if sim_data:
+    sim_angles = [float(row['Crank Angle (deg)']) for row in sim_data]
+    sim_v = [float(row['Velocity (mm/s)']) for row in sim_data]
+    sim_ma = [float(row['Mechanical Advantage']) for row in sim_data]
+    sim_torque = [float(row['Crank Torque (N*m)']) for row in sim_data]
+    axes[0].plot(sim_angles, sim_v, 'g-', label='Simulator', linewidth=2)
+    axes[0].plot(theta, v_anal, 'r--', label='Analytical', linewidth=1)
+    axes[1].plot(sim_angles, sim_ma, 'm-', label='Simulator', linewidth=2)
+    axes[1].plot(theta, ma_anal, 'r--', label='Analytical', linewidth=1)
+    axes[2].plot(sim_angles, sim_torque, 'r-', label='Simulator', linewidth=2)
+    axes[2].plot(theta, torque_anal, 'b--', label='Analytical', linewidth=1)
+    for ax in axes: ax.legend(fontsize=8)
+else:
+    axes[0].plot(theta, v_anal, 'g-', linewidth=2)
+    axes[1].plot(theta, ma_anal, 'm-', linewidth=2)
+    axes[2].plot(theta, torque_anal, 'r-', linewidth=2)
+
 axes[0].set_ylabel('Velocity (mm/s)')
 axes[0].axhline(y=0, color='k', linewidth=0.5)
 axes[0].axvline(x=0, color='r', linestyle='--', alpha=0.5, label='TDC')
 axes[0].axvline(x=180, color='b', linestyle='--', alpha=0.5, label='BDC')
-axes[0].legend()
 axes[0].set_title('Experiment 5: Dead Centers (r=50, l=150, F=500N, 30 RPM)')
-
-axes[1].plot(theta, ma, 'm-', linewidth=2)
 axes[1].set_ylabel('Mechanical Advantage')
-axes[1].set_ylim(0, 0.15)  # Clip the infinity spikes for readability
-axes[1].axvline(x=0, color='r', linestyle='--', alpha=0.5)
-axes[1].axvline(x=180, color='b', linestyle='--', alpha=0.5)
-
-axes[2].plot(theta, torque, 'r-', linewidth=2)
+axes[1].set_ylim(0, 0.15)
 axes[2].set_ylabel('Crank Torque (Nm)')
 axes[2].set_xlabel('Crank Angle (degrees)')
 axes[2].axhline(y=0, color='k', linewidth=0.5)
-axes[2].axvline(x=0, color='r', linestyle='--', alpha=0.5)
-axes[2].axvline(x=180, color='b', linestyle='--', alpha=0.5)
 
 plt.tight_layout()
-plt.savefig('experiment_5_dead_centers.png', dpi=150)
+plt.savefig('plots/experiment_5_dead_centers.png', dpi=150)
 plt.show()
 
-# Print values at key angles
 for angle in [0, 30, 60, 90, 120, 150, 180]:
-    print(f"theta={angle:3d}: x={x[angle]:.2f} mm, v={v[angle]:.2f} mm/s, MA={ma[angle]:.4f}, T={torque[angle]:.4f} Nm")
+    print(f"theta={angle:3d}: x={x_anal[angle]:.2f} mm, v={v_anal[angle]:.2f} mm/s, "
+          f"MA={ma_anal[angle]:.4f}, T={torque_anal[angle]:.4f} Nm")
 ```
 
 ### Design Question
@@ -601,37 +744,72 @@ Compute full-cycle torque curves at different speeds and forces, and estimate th
 ```python title="experiment_6_torque_analysis.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# Run at 30, 60, 120 RPM with F=500N, download CSV for each
+# ============================================================
+csv_files = {
+    '30 RPM': 'data/exp6_30rpm.csv',
+    '60 RPM': 'data/exp6_60rpm.csv',
+    '120 RPM': 'data/exp6_120rpm.csv',
+}
+sim_datasets = {}
+for label, path in csv_files.items():
+    if os.path.exists(path):
+        with open(path) as f:
+            sim_datasets[label] = list(csv.DictReader(f))
+        print(f"Loaded {len(sim_datasets[label])} rows for {label}")
+    else:
+        print(f"No CSV at {path} (analytical only for {label})")
+
+# ============================================================
+# STEP 2: Analytical computation + STEP 3: Plot comparison
+# ============================================================
 r, l, e = 50, 150, 0
 F = 500  # N
 
 fig, ax = plt.subplots(figsize=(10, 5))
+rpm_colors = {'30 RPM': 'blue', '60 RPM': 'green', '120 RPM': 'red'}
 
 for rpm, color in [(30, 'blue'), (60, 'green'), (120, 'red')]:
     omega = rpm * 2 * np.pi / 60
-    theta = np.linspace(0, 360, 361)
+    theta = np.arange(0, 361)
     theta_rad = np.radians(theta)
     sinT = np.sin(theta_rad)
     cosT = np.cos(theta_rad)
     S = r * sinT - e
     Q = np.sqrt(l**2 - S**2)
+    v_anal = -r * omega * (sinT + cosT * S / Q)
+    torque_anal = F * (v_anal / 1000) / omega
 
-    v = -r * omega * (sinT + cosT * S / Q)
-    torque = F * (v / 1000) / omega  # Nm
+    label = f'{rpm} RPM'
+    if label in sim_datasets:
+        sim = sim_datasets[label]
+        sim_angles = [float(row['Crank Angle (deg)']) for row in sim]
+        sim_torque = [float(row['Crank Torque (N*m)']) for row in sim]
+        ax.plot(sim_angles, sim_torque, '-', color=color,
+                label=f'{label} (simulator)', linewidth=2)
+        ax.plot(theta, torque_anal, '--', color=color,
+                label=f'{label} (analytical)', linewidth=1, alpha=0.6)
+        peak_sim = max(abs(t) for t in sim_torque)
+        print(f"{label}: peak torque (sim) = {peak_sim:.4f} Nm")
+    else:
+        ax.plot(theta, torque_anal, color=color, label=label, linewidth=2)
 
-    ax.plot(theta, torque, color=color, label=f'{rpm} RPM', linewidth=2)
-
-    # Energy per cycle = integral of |torque| * d_theta
-    energy = np.trapz(np.abs(torque), np.radians(theta))
-    print(f'{rpm} RPM: Peak torque = {np.max(np.abs(torque)):.4f} Nm, Energy/cycle = {energy:.4f} J')
+    energy = np.trapz(np.abs(torque_anal), np.radians(theta))
+    print(f"{label}: peak torque (anal) = {np.max(np.abs(torque_anal)):.4f} Nm, "
+          f"energy/cycle = {energy:.4f} J")
 
 ax.set_xlabel('Crank Angle (degrees)')
 ax.set_ylabel('Crank Torque (Nm)')
 ax.set_title(f'Experiment 6: Crank Torque vs Speed (F={F}N, r={r}, l={l})')
 ax.axhline(y=0, color='k', linewidth=0.5)
-ax.legend()
+ax.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig('experiment_6_torque.png', dpi=150)
+plt.savefig('plots/experiment_6_torque.png', dpi=150)
 plt.show()
 ```
 
@@ -715,9 +893,50 @@ Quantify how crank length, rod length, and speed each affect peak acceleration, 
 ```python title="experiment_8_sensitivity.py"
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
 
-theta = np.linspace(0, 360, 361)
-theta_rad = np.radians(theta)
+# ============================================================
+# STEP 1: Load CSV data from the simulator
+# Run for each parameter variation, download CSV
+# Name files: exp8_r30.csv, exp8_l100.csv, exp8_rpm30.csv, etc.
+# ============================================================
+csv_dir = 'data'
+sim_r, sim_l, sim_rpm = {}, {}, {}
+
+for r_val in [30, 40, 50, 60, 70]:
+    path = os.path.join(csv_dir, f'exp8_r{r_val}.csv')
+    if os.path.exists(path):
+        with open(path) as f:
+            rows = list(csv.DictReader(f))
+        accels = [abs(float(row['Acceleration (mm/s²)'])) for row in rows]
+        sim_r[r_val] = max(accels)
+
+for l_val in [100, 125, 150, 175, 200]:
+    path = os.path.join(csv_dir, f'exp8_l{l_val}.csv')
+    if os.path.exists(path):
+        with open(path) as f:
+            rows = list(csv.DictReader(f))
+        accels = [abs(float(row['Acceleration (mm/s²)'])) for row in rows]
+        sim_l[l_val] = max(accels)
+
+for rpm_val in [30, 60, 90, 120]:
+    path = os.path.join(csv_dir, f'exp8_rpm{rpm_val}.csv')
+    if os.path.exists(path):
+        with open(path) as f:
+            rows = list(csv.DictReader(f))
+        accels = [abs(float(row['Acceleration (mm/s²)'])) for row in rows]
+        sim_rpm[rpm_val] = max(accels)
+
+loaded = len(sim_r) + len(sim_l) + len(sim_rpm)
+print(f"Loaded simulator data for {loaded} configurations")
+if loaded == 0:
+    print("No CSV files found. Using analytical data only.")
+
+# ============================================================
+# STEP 2: Analytical computation
+# ============================================================
+theta_rad = np.radians(np.arange(0, 361))
 
 def peak_accel(r, l, e, rpm):
     omega = rpm * 2 * np.pi / 60
@@ -725,43 +944,53 @@ def peak_accel(r, l, e, rpm):
     cosT = np.cos(theta_rad)
     S = r * sinT - e
     Q = np.sqrt(l**2 - S**2)
-    a = omega**2 * (-r * cosT + r * sinT * S / Q - r**2 * cosT**2 * l**2 / Q**3)
+    a = omega**2 * (-r*cosT + r*sinT*S/Q - r**2*cosT**2*l**2/Q**3)
     return np.max(np.abs(a))
 
-# Sensitivity to crank length
+# ============================================================
+# STEP 3: Plot simulator data vs analytical
+# ============================================================
 r_values = np.arange(20, 75, 5)
 a_r = [peak_accel(r, 150, 0, 60) for r in r_values]
-
-# Sensitivity to rod length
 l_values = np.arange(80, 220, 10)
 a_l = [peak_accel(50, l, 0, 60) for l in l_values]
-
-# Sensitivity to speed
 rpm_values = np.arange(20, 150, 10)
 a_rpm = [peak_accel(50, 150, 0, rpm) for rpm in rpm_values]
 
 fig, axes = plt.subplots(1, 3, figsize=(14, 4))
 
-axes[0].plot(r_values, a_r, 'bo-')
+axes[0].plot(r_values, a_r, 'b-', label='Analytical', linewidth=2)
+if sim_r:
+    sr_x = sorted(sim_r.keys())
+    axes[0].plot(sr_x, [sim_r[k] for k in sr_x], 'ro', label='Simulator', markersize=8)
+    axes[0].legend(fontsize=8)
 axes[0].set_xlabel('Crank Length r (mm)')
 axes[0].set_ylabel('Peak |Acceleration| (mm/s^2)')
 axes[0].set_title('Sensitivity to r')
 
-axes[1].plot(l_values, a_l, 'rs-')
+axes[1].plot(l_values, a_l, 'r-', label='Analytical', linewidth=2)
+if sim_l:
+    sl_x = sorted(sim_l.keys())
+    axes[1].plot(sl_x, [sim_l[k] for k in sl_x], 'bo', label='Simulator', markersize=8)
+    axes[1].legend(fontsize=8)
 axes[1].set_xlabel('Rod Length l (mm)')
 axes[1].set_title('Sensitivity to l')
 
-axes[2].plot(rpm_values, a_rpm, 'g^-')
+axes[2].plot(rpm_values, a_rpm, 'g-', label='Analytical', linewidth=2)
+if sim_rpm:
+    srpm_x = sorted(sim_rpm.keys())
+    axes[2].plot(srpm_x, [sim_rpm[k] for k in srpm_x], 'mo', label='Simulator', markersize=8)
+    axes[2].legend(fontsize=8)
 axes[2].set_xlabel('Speed (RPM)')
 axes[2].set_title('Sensitivity to RPM')
 
 plt.suptitle('Experiment 8: Parametric Sensitivity of Peak Acceleration')
 plt.tight_layout()
-plt.savefig('experiment_8_sensitivity.png', dpi=150)
+plt.savefig('plots/experiment_8_sensitivity.png', dpi=150)
 plt.show()
 
 print("Key finding: acceleration scales with omega^2 (quadratic with speed)")
-print(f"Doubling speed from 60 to 120 RPM: {peak_accel(50,150,0,120)/peak_accel(50,150,0,60):.1f}x increase")
+print(f"Doubling speed 60->120 RPM: {peak_accel(50,150,0,120)/peak_accel(50,150,0,60):.1f}x increase")
 ```
 
 ### Expected Results
