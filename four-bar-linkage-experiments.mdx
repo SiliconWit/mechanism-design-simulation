@@ -1,10 +1,10 @@
 ---
 title: "Four-Bar Linkage Experiments"
-description: "Six structured engineering experiments on the four-bar linkage mechanism. Covers Grashof condition, crank-rocker vs double-rocker behavior, transmission angle limits, coupler curves, open vs crossed circuits, and parametric sensitivity."
+description: "Eight structured engineering experiments on the four-bar linkage mechanism. Covers Grashof condition, transmission angle, preset comparison, open/crossed circuits, coupler curves, parametric sensitivity, angular acceleration, and mechanism failure modes. Includes Python analysis scripts and design questions."
 contributors: "sam-macharia"
 pubDate: 2026-03-19
 tags: ["four-bar-linkage", "mechanism-design", "kinematics", "simulation", "python", "grashof", "mechanical-engineering"]
-excerpt: "Run six hands-on experiments on a four-bar linkage simulator. Verify the Grashof condition, explore transmission angle limits, trace coupler curves, and build intuition for the most fundamental mechanism in mechanical engineering."
+excerpt: "Run eight hands-on experiments on a four-bar linkage simulator. Verify the Grashof condition, explore transmission angle limits, trace coupler curves, test ground offset effects, and build intuition for the most fundamental mechanism in mechanical engineering."
 heroImage: "https://cdn.siliconwit.com/product-development/2d-mechanisms-analyzer/four-bar-linkage-simulator.png"
 ---
 
@@ -158,6 +158,10 @@ for cfg in configs:
 
 You need a mechanism where the input crank makes full rotations but the output oscillates. Which link must be the shortest? What happens if manufacturing errors make one link 2mm longer than specified, pushing s+l past the boundary?
 
+### Challenge: Ground Offset
+
+Using the crank-rocker preset (a=40, b=120, c=80, d=100), gradually increase the ground offset from 0 to 50mm. The effective ground length becomes sqrt(d^2 + e^2), which changes the Grashof classification. At what offset value does the mechanism stop being Grashof? Does the mechanism still work at all angles? Record the Grashof type and valid position count for e = 0, 20, 40, 50.
+
 ## Experiment 2: Transmission Angle and Mechanism Quality
 
 <InArticleAd />
@@ -262,6 +266,10 @@ plt.show()
 ### Design Question
 
 You are designing a mechanism for a packaging machine that must transmit force reliably at all positions. What minimum transmission angle would you require? How would you adjust link lengths to achieve it?
+
+### Challenge: Quick-Return Time Ratio
+
+For a crank-rocker, the follower spends more time on one stroke than the other (the crank sweeps different arc lengths for forward vs return). Using the time domain toggle (switch x-axis to Time), measure how long the follower takes for the forward swing vs the return swing with the crank-rocker preset. Then add a ground offset of e=30mm. Does the time ratio change? This ratio matters for machines like shapers that need a fast idle return.
 
 ## Experiment 3: Comparing the Four Presets
 
@@ -368,6 +376,10 @@ plt.show()
 ### Analysis Question
 
 A windshield wiper needs oscillating output from a rotating motor. Which preset matches this requirement? A conveyor belt needs both sprockets to rotate continuously. Which preset fits? What makes the parallelogram special for applications like bus doors and drafting machines?
+
+### Challenge: Find Your Own Application
+
+Identify a real mechanism around you (a door closer, a folding chair, a car hood hinge, a pair of pliers, a bicycle brake lever) and try to estimate its link lengths. Enter them in the simulator and see if the behavior matches what you observe in real life. Document: what type of four-bar is it? Does it match a Grashof classification? What is its transmission angle range?
 
 ## Experiment 4: Open vs Crossed Circuit
 
@@ -646,6 +658,7 @@ Your mechanism has a=40mm with a manufacturing tolerance of plus or minus 1mm. A
 
 <InArticleAd />
 
+
 Angular acceleration determines the inertia torques on each link and the dynamic forces at the joints. High accelerations mean high bearing loads, vibration, and noise. In high-speed mechanisms (textile machines, printing presses), controlling angular acceleration is as important as controlling the position. This experiment reveals where the acceleration spikes occur and how link proportions control their magnitude.
 
 :::note[Objective]
@@ -752,6 +765,7 @@ A mechanism runs at 300 RPM. You measure that the follower angular acceleration 
 ## Experiment 8: Breaking the Mechanism
 
 <InArticleAd />
+
 
 Just as a crank-slider breaks when the rod is too short, a four-bar linkage breaks when the link lengths violate the closure condition. But unlike the crank-slider's simple constraint (l must be at least r + abs(e)), the four-bar has a more subtle failure: the mechanism can exist at some angles but not others, creating "dead zones" where the linkage locks. This experiment maps where those dead zones appear and how close to the boundary a working mechanism can get.
 
