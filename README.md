@@ -21,7 +21,8 @@ Hands-on engineering experiments using interactive browser-based mechanism simul
 | # | Title | Simulator |
 |---|-------|-----------|
 | 1 | Crank-Slider Mechanism Experiments (8 experiments) | [Crank-Slider Simulator](https://siliconwit.com/product-development/crank-slider-mechanism-simulator/) |
-| 2 | Four-Bar Linkage Experiments (6 experiments) | [Four-Bar Linkage Simulator](https://siliconwit.com/product-development/four-bar-linkage-simulator/) |
+| 2 | Four-Bar Linkage Experiments (9 experiments) | [Four-Bar Linkage Simulator](https://siliconwit.com/product-development/four-bar-linkage-simulator/) |
+| 3 | Scissor Lift Experiments (9 experiments) | [Scissor Lift Simulator](https://siliconwit.com/product-development/scissor-lift-mechanism-simulator/) |
 
 ## File Structure
 
@@ -30,6 +31,7 @@ mechanism-design-simulation/
 ├── index.mdx
 ├── crank-slider-experiments.mdx
 ├── four-bar-linkage-experiments.mdx
+├── scissor-lift-experiments.mdx
 └── README.md
 ```
 
