@@ -37,16 +37,74 @@ mechanism-design-simulation/
 
 ## How to Contribute
 
+All commands below work on Linux, macOS, and Windows (using Git Bash, PowerShell, or Command Prompt with Git installed).
+
+### For Team Members (with push access)
+
+**First time setup (clone the repo once):**
+
+```bash
+git clone https://github.com/SiliconWit/mechanism-design-simulation.git
+cd mechanism-design-simulation
+```
+
+**Every time you start working:**
+
+```bash
+git pull origin main
+```
+
+Always pull before making changes. This avoids conflicts with other contributors.
+
+**After making your changes:**
+
+```bash
+git add .
+git commit -m "Brief description of what you changed"
+git push origin main
+```
+
+**If you get a push error** (someone pushed before you):
+
+```bash
+git pull origin main
+```
+
+Git will merge the changes automatically in most cases. If there is a conflict, Git will mark the conflicting lines in the file. Open the file, choose which version to keep, then:
+
+```bash
+git add .
+git commit -m "Resolve merge conflict"
+git push origin main
+```
+
+**Tips to avoid conflicts:**
+
+- Always `git pull origin main` before you start working
+- Push your changes as soon as you are done, do not hold onto uncommitted work for long
+- Coordinate with other contributors so two people are not editing the same file at the same time
+
+### For External Contributors (without push access)
+
 1. Fork the repository: [SiliconWit/mechanism-design-simulation](https://github.com/SiliconWit/mechanism-design-simulation)
-2. Create a feature branch: `git checkout -b feature/your-topic`
-3. Make your changes and commit with a clear message
-4. Push to your fork and open a Pull Request against `main`
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/mechanism-design-simulation.git
+   cd mechanism-design-simulation
+   ```
+3. Make your changes and commit:
+   ```bash
+   git add .
+   git commit -m "Brief description of what you changed"
+   git push origin main
+   ```
+4. Open a Pull Request against `main` on the original repository
 5. Describe what you changed and why in the PR description
 
 ## Content Standards
 
 - All lesson files use `.mdx` format
-- Each experiment must include: objective, setup instructions, data collection table, analysis questions, Python script, and expected results
+- Each experiment must include: objective, setup instructions, data collection table, Python script, expected results, and design question
 - Code blocks should include a title attribute:
   ````mdx
   ```python title="analyze_velocity.py"
@@ -56,12 +114,11 @@ mechanism-design-simulation/
   ````
 - Use Starlight components (`<Tabs>`, `<TabItem>`, `<Steps>`, `<Card>`) where appropriate
 - Python scripts must work with CSV files exported from the simulators
-- Mathematical notation uses LaTeX in MDX
 - Experiments should progress from basic observation to quantitative analysis
 
 ## Local Development
 
-Clone the main site repository and initialize submodules:
+To preview the full site locally, clone the main site repository and initialize submodules:
 
 ```bash
 git clone --recurse-submodules <main-repo-url>
