@@ -107,6 +107,10 @@ Crank Angle (deg),Displacement (mm),Velocity (mm/s),Acceleration (mm/s²),Mechan
 
 The Python scripts load simulator CSV data and overlay it against analytical computations, so you can verify the simulator's accuracy and catch any discrepancies.
 
+:::tip[Instrument it]
+A slider-crank lives in engines, pumps, and compressors, and it fails in known ways: bearing and wrist-pin wear, piston side-thrust scoring the cylinder, and combustion knock. All of it shows up as vibration (a car's knock sensor is just an accelerometer on the block). Mount a MEMS accelerometer, an ADXL345 or the lower-noise ADXL355, near the main bearing; in a pump or compressor add a pressure transducer at the cylinder head to watch the actual delivery. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads them, and on a small board it can [stream](/education/iot-systems/) the trace to tune the machine and [flag the anomaly](https://siliconwit.io) before a bearing lets go.
+:::
+
 ## Experiment 1: Baseline Kinematic Profile
 
 <InArticleAd />

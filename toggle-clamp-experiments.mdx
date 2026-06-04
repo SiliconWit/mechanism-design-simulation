@@ -70,6 +70,10 @@ flowchart TD
 
 ---
 
+:::tip[Instrument it]
+A toggle clamp holds by going over-centre, but its grip fades as the pads and pivots wear, and a clamp that has quietly gone slack lets bad parts through a line. Measure the real clamping force with a load cell or thin-film force sensor at the pad, or a strain gauge on the clamp arm. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads it, and on a small board it can [log](/education/iot-systems/) the force every cycle and [alert on a weak clamp](https://siliconwit.io) before the defects reach your customer.
+:::
+
 ## Experiment 1: Top-Dead-Centre and Self-Locking
 
 <InArticleAd />

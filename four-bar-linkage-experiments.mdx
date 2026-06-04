@@ -91,6 +91,10 @@ flowchart TD
 
 For each experiment, read values from the simulator's charts and summary panels. Save as CSV files. Alternatively, download the complete CSV from the simulator's download section.
 
+:::tip[Instrument it]
+The real question on a four-bar is whether it traces the motion you actually designed: backlash, frame flex, and joint clearance all pull the output off the ideal path. Put an encoder on the input crank and another on the output link to measure the true input-to-output relationship, so you can verify the timing, tune it, and later watch lost motion grow as the joints wear. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads them, and on a small board it can [stream](/education/iot-systems/) the comparison and [trend it over time](https://siliconwit.io).
+:::
+
 ## Experiment 1: The Grashof Condition
 
 <InArticleAd />

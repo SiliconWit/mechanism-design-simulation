@@ -75,6 +75,10 @@ Create a working directory for your experiment files:
 
 ---
 
+:::tip[Instrument it]
+A scissor lift fails dangerously, by overload and by side instability, and both are measurable. Put a load cell under the platform or a pressure transducer on the hydraulic cylinder to know the actual load against its rated limit, and an inclinometer or an MPU6050 on the platform to catch tilt before it tips. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads them, and on a small board it can [stream](/education/iot-systems/) the load and [alert or cut the lift](https://siliconwit.io) the moment it crosses a safe limit.
+:::
+
 ## Experiment 1: Baseline Height and Force Profile
 
 <InArticleAd />

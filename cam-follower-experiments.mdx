@@ -69,6 +69,10 @@ flowchart TD
   - scripts/
 </FileTree>
 
+:::tip[Instrument it]
+The classic high-speed cam failures are follower jump (loss of contact) and surface wear, and both show up as vibration. Mount a small MEMS accelerometer on the follower stem, aligned with the line of motion: an ADXL345 to start, or the lower-noise ADXL355 or wide-band ADXL1002 to resolve the sharp impact of jump and the rising hiss of wear. Add a Hall sensor or shaft encoder for the cam angle so a fault lines up with position. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads the accelerometer and the angle sensor, and on a small board it can [stream](/education/iot-systems/) that trace and [alert on the change](https://siliconwit.io) so the cam warns you before it fails.
+:::
+
 ---
 
 ## Experiment 1: SVAJ and the Fundamental Law of Cam Design
