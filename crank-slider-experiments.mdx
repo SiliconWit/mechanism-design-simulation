@@ -373,7 +373,7 @@ plt.show()
 
 ### Design Question
 
-A shaper machine needs the cutting stroke to be 1.5 times slower than the return stroke (quick-return ratio of 1.5). With r = 50 mm and l = 150 mm, what offset value would you need? Use the simulator to find it experimentally by adjusting e and checking the time-domain velocity plot.
+With r = 50 mm and l = 150 mm, find the strongest quick-return you can reach by raising the offset to the slider's limit of e = 50 mm, and read the ratio in the time domain (it is only about 1.2). Now reason about why an offset slider-crank cannot reach the 1.7-plus ratio a real shaper needs: the offset must stay below l - r for the mechanism to assemble, and the stroke stays close to 2r, so the asymmetry it can produce is limited. This ceiling is exactly why production shapers use the **crank-and-slotted-lever** mechanism instead, worked through in the [planar-mechanics quick-return application](/education/planar-mechanics/position-analysis-planar-linkages#application-5-quick-return-position-a-slider-crank-inversion). For a ready-made strong case here, the **Quick-Return (offset)** preset (r = 60, l = 120, e = 50) reaches a ratio of about 1.6.
 
 ## Experiment 3: Rod-to-Crank Ratio and Smoothness
 
@@ -829,7 +829,7 @@ The torque curve shows large variations through the cycle. A motor delivering co
 An IC engine, an air compressor, and a hydraulic press are all crank-slider mechanisms. Yet they look different, run at different speeds, and have different proportions. Why? Because each machine optimizes for something different: the engine wants smooth, balanced, high-speed motion; the compressor wants efficient compression at moderate speed; the press wants maximum force at low speed with a quick return. By overlaying their kinematic profiles on the same charts, you can see exactly how the same four parameters (r, l, e, speed) create three fundamentally different machines. This is design thinking: understanding which parameter serves which purpose.
 
 :::note[Objective]
-Compare three real-world applications side by side and identify which parameter choices serve which engineering goals.
+Compare the three real-world application presets side by side, plus the quick-return demonstration, and identify which parameter choices serve which engineering goals.
 :::
 
 <Steps>
@@ -845,20 +845,23 @@ Compare three real-world applications side by side and identify which parameter 
 4. **Air Compressor preset**
    Clear Experiment A. Select Air Compressor (r=30, l=120, e=0, 90 RPM, F=200 N). Compare with the previous two.
 
-5. **Collect data**
+5. **Quick-Return preset**
+   Select Quick-Return (offset) (r=60, l=120, e=50, 40 RPM, F=300 N). Its large offset makes the velocity profile the most asymmetric of the four: the forward and return strokes take clearly unequal times (ratio about 1.6).
+
+6. **Collect data**
    For each preset, read the stroke, peak velocity, peak acceleration, and peak torque from the summary panels. Calculate the l/r ratio by hand. Record in the table and save as `data/exp7_presets.csv`. Alternatively, download the CSV from the simulator for each preset.
 </Steps>
 
 ### Data Collection Table
 
-| Measurement | IC Engine | Air Compressor | Hydraulic Press |
-|-------------|-----------|----------------|-----------------|
-| Stroke (mm) | | | |
-| l/r ratio | | | |
-| Peak velocity (mm/s) | | | |
-| Peak acceleration (mm/s^2) | | | |
-| Peak torque (Nm) | | | |
-| Quick-return ratio | | | |
+| Measurement | IC Engine | Air Compressor | Hydraulic Press | Quick-Return |
+|-------------|-----------|----------------|-----------------|--------------|
+| Stroke (mm) | | | | |
+| l/r ratio | | | | |
+| Peak velocity (mm/s) | | | | |
+| Peak acceleration (mm/s^2) | | | | |
+| Peak torque (Nm) | | | | |
+| Quick-return ratio | | | | |
 
 ### Analysis Question
 
