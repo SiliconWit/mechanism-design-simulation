@@ -985,24 +985,33 @@ Map the angular acceleration profiles of the coupler and follower, identify the 
 
 <Steps>
 1. **Baseline**
-   Use the crank-rocker preset (a=40, b=120, c=80, d=100, 60 RPM). Run the experiment. Note the follower angular velocity profile shape.
+   Use the crank-rocker preset (a=40, b=120, c=80, d=100, 60 RPM) with the assembly set to **Open**. Run the experiment, then open the &alpha;₃ and &alpha;₄ tabs. These plot angular acceleration directly, so this experiment is read off them rather than inferred from the velocity charts.
 
-2. **Predict**
-   At what input angles do you expect the follower angular velocity to be zero? (These are the points where acceleration is highest, because the follower reverses direction.)
+2. **Find the reversals first**
+   On the &omega;₄ chart, note the two input angles where the follower angular velocity crosses zero: these are the ends of the rocker's swing, near 24&deg; and 231&deg;.
 
-3. **Increase speed**
-   Change speed to 120 RPM. Run the experiment. Save as Experiment A. Then change back to 60 RPM and run. Compare the overlay.
+3. **Predict, then check**
+   Is the follower's angular acceleration largest at those reversal angles? Write down your answer before looking. Then read the &alpha;₄ chart and find where its peak actually sits.
 
-4. **Collect data**
-   Record the peak omega4 values at both speeds. Note: angular acceleration scales with the square of speed (like crank-slider). Save as `data/exp7_acceleration.csv`. Alternatively, download the CSV from the simulator.
+4. **Increase speed**
+   Change speed to 120 RPM. Run the experiment. Save as Experiment A. Then change back to 60 RPM and run, and compare the overlay on the &alpha;₄ chart.
+
+5. **Collect data**
+   Record the peak angular accelerations at both speeds, and the input angle at which each occurs. Save as `data/exp7_acceleration.csv`, or download the CSV from the simulator, where the columns are `Alpha3 (rad/s2)` and `Alpha4 (rad/s2)`.
 </Steps>
 
 ### Data Collection Table
 
-| Configuration | Max omega4 (rad/s) | Max omega3 (rad/s) | Follower reversal angles |
-|---------------|-------------------|-------------------|------------------------|
-| 60 RPM | | | |
-| 120 RPM | | | |
+| Configuration | Max &#124;&alpha;₃&#124; (rad/s²) | at &theta;₂ | Max &#124;&alpha;₄&#124; (rad/s²) | at &theta;₂ |
+|---------------|------------------|-------------|------------------|-------------|
+| 60 RPM | | | | |
+| 120 RPM | | | | |
+
+:::note[What the numbers should come to]
+At 60 RPM this linkage peaks at $\lvert\alpha_3\rvert = 38.2$ rad/s² (near $\theta_2 = 322\degree$) and $\lvert\alpha_4\rvert = 67.1$ rad/s² (near $\theta_2 = 8.5\degree$). At 120 RPM they become $152.7$ and $268.5$ rad/s², exactly four times as large.
+
+The peak of $\alpha_4$ does **not** sit at a reversal. The follower reverses at $\theta_2 \approx 24\degree$, where $\omega_4 = 0$, but $\lvert\alpha_4\rvert$ peaks earlier, near $8.5\degree$. Angular acceleration is the *slope* of the angular-velocity curve, so it is largest where $\omega_4$ falls most steeply, not where it happens to be zero. The two coincide only for a pure sinusoid, and a four-bar's output is not one.
+:::
 
 ### Python Analysis
 
@@ -1044,14 +1053,29 @@ def solve_fourbar_vel(a, b, c, d, e, theta2_deg, omega2):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    # Open circuit, the same branch the simulator assembles under "Open".
+    # Flipping these two signs gives the crossed circuit.
+    Bx, By = mx - h*dy/dist, my + h*dx/dist
     t3 = np.arctan2(By-Ay, Bx-Ax)
     t4 = np.arctan2(By-e, Bx-d)
     sin34 = np.sin(t3 - t4)
     if abs(sin34) < 1e-10: return None
+    # Note the denominators differ by a sign: omega3 divides by sin(t3-t4),
+    # omega4 by sin(t4-t3).
     w3 = a*omega2*np.sin(t4 - t2) / (b*sin34)
     w4 = a*omega2*np.sin(t2 - t3) / (c*np.sin(t4 - t3))
-    return {'omega3': w3, 'omega4': w4}
+
+    # Angular accelerations, for a constant-speed input (alpha2 = 0). Solving
+    # the twice-differentiated loop as a 2x2 system in alpha3 and alpha4.
+    AA = c*np.sin(t4); BB = b*np.sin(t3)
+    DD = c*np.cos(t4); EE = b*np.cos(t3)
+    CC = a*omega2**2*np.cos(t2) + b*w3**2*np.cos(t3) - c*w4**2*np.cos(t4)
+    FF = -a*omega2**2*np.sin(t2) - b*w3**2*np.sin(t3) + c*w4**2*np.sin(t4)
+    den = AA*EE - BB*DD
+    if abs(den) < 1e-10: return None
+    a3 = (CC*DD - AA*FF) / den
+    a4 = (CC*EE - BB*FF) / den
+    return {'omega3': w3, 'omega4': w4, 'alpha3': a3, 'alpha4': a4}
 
 a, b, c, d, e_off = 40, 120, 80, 100, 0
 theta2 = np.arange(0, 361)
@@ -1065,43 +1089,45 @@ rpm_colors = {'60 RPM': 'blue', '120 RPM': 'red'}
 for rpm, color, label in [(60, 'blue', '60 RPM'), (120, 'red', '120 RPM')]:
     omega2 = rpm * 2 * np.pi / 60
     # Analytical
-    w4_anal, w3_anal = [], []
+    a4_anal, a3_anal = [], []
     for t in theta2:
         r = solve_fourbar_vel(a, b, c, d, e_off, t, omega2)
-        w4_anal.append(r['omega4'] if r else np.nan)
-        w3_anal.append(r['omega3'] if r else np.nan)
-    w4_anal = np.array(w4_anal)
-    w3_anal = np.array(w3_anal)
+        a4_anal.append(r['alpha4'] if r else np.nan)
+        a3_anal.append(r['alpha3'] if r else np.nan)
+    a4_anal = np.array(a4_anal)
+    a3_anal = np.array(a3_anal)
 
     if label in sim_datasets:
         sim = sim_datasets[label]
         sim_angles = [float(row['Input Angle (deg)']) for row in sim]
-        sim_w4 = [float(row['Omega4 (rad/s)']) for row in sim]
-        sim_w3 = [float(row['Omega3 (rad/s)']) for row in sim]
-        axes[0].plot(sim_angles, sim_w4, '-', color=color,
+        sim_a4 = [float(row['Alpha4 (rad/s2)']) for row in sim]
+        sim_a3 = [float(row['Alpha3 (rad/s2)']) for row in sim]
+        axes[0].plot(sim_angles, sim_a4, '-', color=color,
                      label=f'{label} (simulator)', linewidth=2)
-        axes[0].plot(theta2, w4_anal, '--', color=color,
+        axes[0].plot(theta2, a4_anal, '--', color=color,
                      label=f'{label} (analytical)', linewidth=1, alpha=0.6)
-        axes[1].plot(sim_angles, sim_w3, '-', color=color,
+        axes[1].plot(sim_angles, sim_a3, '-', color=color,
                      label=f'{label} (simulator)', linewidth=2)
-        axes[1].plot(theta2, w3_anal, '--', color=color,
+        axes[1].plot(theta2, a3_anal, '--', color=color,
                      label=f'{label} (analytical)', linewidth=1, alpha=0.6)
         # Error report
-        common = min(len(sim_w4), len(w4_anal))
-        errs = [abs(s - a) for s, a in zip(sim_w4[:common], w4_anal[:common]) if not np.isnan(a)]
+        common = min(len(sim_a4), len(a4_anal))
+        errs = [abs(s - a) for s, a in zip(sim_a4[:common], a4_anal[:common]) if not np.isnan(a)]
         if errs:
-            print(f"{label}: omega4 max error = {max(errs):.4f} rad/s")
+            print(f"{label}: alpha4 max error = {max(errs):.4f} rad/s2")
     else:
-        axes[0].plot(theta2, w4_anal, '-', color=color, label=label, linewidth=2)
-        axes[1].plot(theta2, w3_anal, '-', color=color, label=label, linewidth=2)
+        axes[0].plot(theta2, a4_anal, '-', color=color, label=label, linewidth=2)
+        axes[1].plot(theta2, a3_anal, '-', color=color, label=label, linewidth=2)
 
-    print(f"{label}: peak |omega4| = {np.nanmax(np.abs(w4_anal)):.3f} rad/s")
+    peak = np.nanmax(np.abs(a4_anal))
+    where = theta2[int(np.nanargmax(np.abs(a4_anal)))]
+    print(f"{label}: peak |alpha4| = {peak:.2f} rad/s2 at theta2 = {where} deg")
 
-axes[0].set_ylabel('Follower omega4 (rad/s)')
-axes[0].set_title('Experiment 7: Angular Velocity at Different Speeds')
+axes[0].set_ylabel('Follower alpha4 (rad/s2)')
+axes[0].set_title('Experiment 7: Angular Acceleration at Different Speeds')
 axes[0].legend(fontsize=8)
 axes[0].axhline(y=0, color='k', linewidth=0.5)
-axes[1].set_ylabel('Coupler omega3 (rad/s)')
+axes[1].set_ylabel('Coupler alpha3 (rad/s2)')
 axes[1].set_xlabel('Input Angle (degrees)')
 axes[1].legend(fontsize=8)
 axes[1].axhline(y=0, color='k', linewidth=0.5)
@@ -1110,7 +1136,7 @@ plt.tight_layout()
 plt.savefig('plots/experiment_7_acceleration.png', dpi=150)
 plt.show()
 
-print(f"\nSpeed ratio: 2x -> omega4 ratio should be 2x (linear)")
+print(f"\nSpeed ratio: 2x -> omega4 ratio 2x (linear), alpha ratio 4x (quadratic)")
 print(f"Acceleration ratio should be 4x (quadratic)")
 ```
 
@@ -1119,7 +1145,7 @@ print(f"Acceleration ratio should be 4x (quadratic)")
 - Follower angular velocity doubles when input speed doubles (linear relationship)
 - Angular acceleration quadruples when input speed doubles (quadratic, same as crank-slider)
 - Follower reversal points (omega4 = 0) occur at the same input angles regardless of speed
-- Peak omega4 occurs near the midpoint of the follower oscillation
+- Peak |alpha4| does not sit at a reversal: it peaks where omega4 falls most steeply, near 8.5 deg, while the reversals are at 24 deg and 231 deg
 
 ### Design Question
 
