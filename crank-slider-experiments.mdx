@@ -25,51 +25,57 @@ import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/sta
 
 import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
-You can memorize the crank-slider position equation and solve textbook problems perfectly, yet still be surprised by what happens when you change the offset from 0 to 20 mm. These experiments close that gap: you will predict, simulate, measure, and analyze, building the kind of intuition that separates someone who knows the formula from someone who understands the mechanism. #CrankSlider #MechanismDesign #EngineeringLab
+A compressor runs smoothly on the test bench at low speed. At full speed it shakes, and some months later a crank bearing fails. Nothing was built wrongly. The piston of a crank and rod does not move like a simple sine wave: it is thrown back harder at one end of its stroke than at the other, and the forces grow with the square of the speed. In these eight experiments you measure that motion in a simulator, see what the rod length and the offset do to it, and find where the mechanism locks or loses its push. #CrankSlider #MechanismDesign #EngineeringLab
 
 :::tip[What you need]
 Open the [Crank-Slider Mechanism Simulator](/product-development/crank-slider-mechanism-simulator/) in a separate browser tab. You will use it throughout all eight experiments. For data analysis, you need Python 3 with NumPy and Matplotlib.
 :::
 
 :::note[Related resources]
-Want to build a 3D model of this mechanism? See the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism) lesson in our FreeCAD course. For a feature overview of the simulator, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+To build a 3D model of this mechanism, see the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism/) lesson in our FreeCAD course. For a feature overview of the simulator, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
 :::
+
+## The crank-slider in brief
+
+A crank-slider changes rotation into straight motion to and fro, or the reverse. A crank turns about a fixed pivot. A connecting rod joins the end of the crank to a slider, and the slider can only move along a straight guide.
+
+You have seen one in every piston engine (the piston is the slider), and in piston pumps, air compressors and power presses.
+
+```text
+           o  crank end
+          / \
+         /   \   rod l
+crank r /     \
+       /       \
+      /         \ +-------+
+     O           \|   o   |---> x
+   pivot          +-------+
+   ================================
+             slider path
+```
+
+The experiments answer a designer's questions. How does the slider move during one turn? How long must the rod be? What does an offset do? Where is the push strong, and where is it zero? What torque must the motor give?
 
 ## Key Terms
 
-Before starting, familiarize yourself with these terms used throughout the experiments:
-
 | Term | Meaning |
 |------|---------|
-| **r** | Crank length (mm), the rotating arm connected to the motor |
-| **l** | Connecting rod length (mm), the link between crank and slider |
-| **e** | Slider offset (mm), the perpendicular distance between the slider path and the crank pivot. Zero means the slider moves in line with the pivot. |
-| **TDC** | Top Dead Center, the crank angle (0 degrees) where the slider reaches its maximum extension (crank and rod are collinear, stretched out) |
-| **BDC** | Bottom Dead Center, the crank angle (180 degrees) where the slider reaches its minimum extension (crank folds back on rod) |
-| **Stroke** | The total distance the slider travels between TDC and BDC, always equal to 2r |
-| **l/r ratio** | Rod-to-crank ratio, a key design parameter. Typical mechanisms use values between 3 and 5 |
-| **MA** | Mechanical advantage, the ratio of output force to input force. Varies continuously through the rotation cycle |
-| **Transmission angle** | The angle between the connecting rod and the slider direction. Below about 40 degrees, force transmission becomes inefficient |
-| **Quick-return** | Asymmetric motion caused by a non-zero offset, where the slider moves faster in one direction than the other |
-
-### Experiment Workflow
-
-```mermaid
-flowchart TD
-    A[Predict] --> B[Configure Simulator]
-    B --> C[Run Experiment]
-    C --> D[Read Charts and Panels]
-    D --> E[Record in CSV]
-    E --> F[Run Python Script]
-    F --> G[Compare and Analyze]
-```
+| **$r$** | Crank length (mm), the rotating arm connected to the motor |
+| **$l$** | Connecting rod length (mm), the link between crank and slider |
+| **$\theta$**, **$x$** | Crank angle (degrees), measured from the direction of the slider path, and slider position (mm), measured from the crank pivot along the path |
+| **$e$** | Slider offset (mm), the perpendicular distance between the slider path and the crank pivot. Zero means the slider moves in line with the pivot |
+| **TDC** | Top Dead Center: the slider is farthest from the pivot, with crank and rod stretched out in one line (at $\theta = 0$ when the offset is zero) |
+| **BDC** | Bottom Dead Center: the slider is nearest to the pivot, with the crank folded back over the rod (at $\theta = 180^\circ$ when the offset is zero) |
+| **Stroke** | The total distance the slider travels between TDC and BDC, equal to $2r$ when the offset is zero and slightly more with an offset |
+| **$l/r$ ratio** | Rod length divided by crank length. Typical mechanisms use values between 3 and 5 |
+| **MA** | Mechanical advantage. In the simulator it is the slider force produced by one unit of crank torque: 0.0309 per mm means that 1 N·m of torque gives 30.9 N at the slider. It changes through the turn |
+| **Transmission angle** | The angle between the connecting rod and the normal to the slider path, $\mu = 90^\circ - \lvert\phi\rvert$ where $\phi$ is the rod angle. It is $90^\circ$ at the dead centers. Below about 40 degrees most of the rod force pushes the slider sideways against its guide |
+| **Quick-return** | Unequal motion caused by an offset: the slider takes less time in one direction than in the other |
 
 ## Setting Up Your Workspace
 
 <InArticleAd />
 
-
-Before starting the experiments, create a project folder to keep your data and scripts organized:
 
 <FileTree>
 - crank-slider-lab/
@@ -93,19 +99,15 @@ Before starting the experiments, create a project folder to keep your data and s
 
 ### How to Record Data
 
-For each experiment, you have two options to collect data:
-
-1. **Download CSV from the simulator** (recommended): The simulator's download section provides a complete CSV with 361 data points and 8 variables per row. This is the most accurate and complete dataset.
-
-2. **Record from charts**: Read values by hovering over the charts at specific angles, then save as a CSV file matching the simulator's column format:
+For each experiment: predict, set the simulator, click "Run Full Experiment", then read values by hovering over the charts and from the summary panels. Save them as a CSV file with the column names below. The download section of the simulator also offers the complete data set (361 rows, 8 variables) in this format:
 
 ```text title="data/exp1_baseline.csv"
 Crank Angle (deg),Displacement (mm),Velocity (mm/s),Acceleration (mm/s²),Mechanical Advantage,Rod Angle (deg),Transmission Angle (deg),Crank Torque (N*m)
 0,200.00,0.00,-2631.89,0.0000,0.00,90.00,0.0000
-30,186.60,-200.12,-1975.43,0.0265,9.59,80.41,-1.0530
+30,191.20,-203.07,-2057.42,0.0309,9.59,80.41,0.0000
 ```
 
-The Python scripts load simulator CSV data and overlay it against analytical computations, so you can verify the simulator's accuracy and catch any discrepancies.
+Each Python script lays the simulator data over its own calculation. With no CSV it prints the calculated values only.
 
 :::tip[Instrument it]
 A slider-crank lives in engines, pumps, and compressors, and it fails in known ways: bearing and wrist-pin wear, piston side-thrust scoring the cylinder, and combustion knock. All of it shows up as vibration (a car's knock sensor is just an accelerometer on the block). Mount a MEMS accelerometer, an ADXL345 or the lower-noise ADXL355, near the main bearing; in a pump or compressor add a pressure transducer at the cylinder head to watch the actual delivery. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads them, and on a small board it can [stream](/education/iot-systems/) the trace to tune the machine and [flag the anomaly](https://siliconwit.io) before a bearing lets go.
@@ -116,7 +118,11 @@ A slider-crank lives in engines, pumps, and compressors, and it fails in known w
 <InArticleAd />
 
 
-Most students can solve $x = r\cos\theta + \sqrt{l^2 - r^2\sin^2\theta}$ on paper, but they are often surprised that the velocity is not sinusoidal and that the acceleration at TDC is significantly larger than at BDC. Without seeing the full 360-degree profile, you cannot appreciate the asymmetry that exists even in a zero-offset mechanism. This experiment builds the reference you will compare every other experiment against.
+The bearings of a piston machine must carry the force that stops the piston and sends it back at each end of the stroke. If you assume that the piston moves like a sine wave, you expect the same force at both ends, and for a rod three times the crank you are wrong by a third at each end. This experiment measures the real motion and builds the reference for all the later experiments.
+
+The slider position is the sum of two lengths measured along the slider path: the part of the crank, $r\cos\theta$, and the part of the rod, which Pythagoras gives from the rod length $l$ and the height of the crank end, $r\sin\theta$:
+
+$$x = r\cos\theta + \sqrt{l^2 - r^2\sin^2\theta}$$
 
 :::note[Objective]
 Verify the position equation against the simulator and observe the velocity/acceleration asymmetry that the position equation alone does not reveal.
@@ -124,23 +130,23 @@ Verify the position equation against the simulator and observe the velocity/acce
 
 <Steps>
 1. **Configure the simulator**
-   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 60 RPM, slider force = 0 N.
+   Set $r = 50\ \text{mm}$, $l = 150\ \text{mm}$, $e = 0\ \text{mm}$, speed = 60 RPM, slider force = 0 N.
 
 2. **Predict**
    Before running the experiment, calculate by hand:
-   - Position at $\theta$ = 0 (TDC): $x = r + l$ = ?
-   - Position at $\theta$ = 180 (BDC): $x = l - r$ = ?
+   - Position at $\theta = 0^\circ$ (TDC): $x = r + l$ = ?
+   - Position at $\theta = 180^\circ$ (BDC): $x = l - r$ = ?
    - Stroke length: TDC - BDC = ?
-   - Position at $\theta$ = 90: $x = \sqrt{l^2 - r^2}$ = ?
+   - Position at $\theta = 90^\circ$: $x = \sqrt{l^2 - r^2}$ = ?
 
 3. **Run the experiment**
    Click "Run Full Experiment". Record the values shown in the displacement summary panel (stroke length, max displacement, min displacement).
 
 4. **Collect data**
-   Hover over the displacement plot to read values at specific angles. Record the position at 0, 90, 180, and 270 degrees in the table below. Alternatively, you can download the CSV file from the simulator's download section for a complete dataset.
+   Hover over the displacement plot to read values at specific angles. Record the position at 0, 90, 180, and 270 degrees in the table below.
 
 5. **Compare predictions with simulation**
-   Do your hand calculations match the simulator output?
+   Do your hand calculations match the simulator output? Then open the Acceleration tab and compare the size of the acceleration at 0 and at 180 degrees: they are not equal.
 </Steps>
 
 ### Data Collection Table
@@ -248,15 +254,15 @@ print(f"Position at 90 deg: {x_anal[90]:.2f} mm")
 - TDC position: 200.00 mm, BDC position: 100.00 mm, Stroke: 100.00 mm
 - Position at 90 degrees: 141.42 mm
 - Velocity is zero at TDC and BDC (dead centers), maximum near mid-stroke
-- Acceleration is maximum (negative) at TDC and maximum (positive) at BDC
-- Analytical and simulator values should match to at least 4 decimal places
+- Acceleration is largest in magnitude (negative, about $-2632\ \text{mm/s}^2$) at TDC. Around BDC it is positive and about half that size ($+1316\ \text{mm/s}^2$ at BDC itself); for $l/r = 3$ the positive peak, about $+1377\ \text{mm/s}^2$, sits either side of BDC near 138 and 222 degrees
+- Analytical and simulator values should match to the 3 decimal places the simulator CSV prints
 
 ## Experiment 2: The Quick-Return Effect (Offset)
 
 <InArticleAd />
 
 
-A shaper machine cuts metal on the forward stroke and returns the tool on the backward stroke. The return stroke does no useful work, so engineers want it to be faster: less idle time means higher productivity. But how do you make one direction faster than the other when the crank rotates at constant speed? The answer is offset. By shifting the slider path away from the crank pivot, the mechanism spends more crank rotation on one stroke than the other. This effect is invisible in the standard e=0 equation, and impossible to appreciate without seeing the velocity profiles side by side.
+A shaper machine cuts metal on the forward stroke and returns the tool on the backward stroke. The return stroke does no useful work, so engineers want it to be faster: less idle time means higher productivity. But how do you make one direction faster than the other when the crank rotates at constant speed? The answer is offset. When the slider path is moved away from the crank pivot, the two dead centers are no longer half a turn apart, so the crank spends more of its turn on one stroke than on the other. The quick-return ratio is the longer of those two crank angles divided by the shorter.
 
 :::note[Objective]
 Observe how offset creates asymmetric motion and quantify the quick-return ratio that determines shaper and press productivity.
@@ -264,27 +270,27 @@ Observe how offset creates asymmetric motion and quantify the quick-return ratio
 
 <Steps>
 1. **Save baseline as Experiment A**
-   With the baseline settings (r=50, l=150, e=0, 60 RPM), click "Save as Experiment A".
+   With the baseline settings ($r = 50$, $l = 150$, $e = 0$, 60 RPM), click "Save as Experiment A".
 
 2. **Apply offset**
-   Change offset to e = 20 mm. Click "Run Full Experiment".
+   Change offset to $e = 20\ \text{mm}$. Click "Run Full Experiment".
 
-3. **Observe the overlay**
-   Both configurations now appear on every chart. Note how the velocity profile becomes asymmetric.
+3. **Compare the two velocity curves**
+   Both configurations now appear on every chart. The $e = 0$ velocity curve has equal peaks above and below zero. With the offset, one peak is higher, and the curve crosses zero later than 0 and 180 degrees.
 
 4. **Repeat with negative offset**
-   Clear Experiment A. Save the current (e=20) as Experiment A. Change to e = -20 mm. Run the experiment.
+   Clear Experiment A. Save the current ($e = 20$) as Experiment A. Change to $e = -20\ \text{mm}$. Run the experiment.
 
 5. **Switch to time domain**
-   Click the "Time (s)" button in the x-axis picker. Observe how the slider spends different amounts of time on the forward vs return stroke.
+   Click the "Time (s)" button in the x-axis picker. On the Displacement chart, the time from the highest point to the lowest is one stroke, and the time back to the highest is the other. They are no longer equal.
 
 6. **Collect data**
-   For each offset value, read the max and min velocity from the velocity summary panel. In time domain, estimate the forward and return stroke durations from the displacement plot. Record in the table below and save as `data/exp2_quick_return.csv`. Alternatively, download the CSV from the simulator's download section for each configuration.
+   The velocity summary panel gives the largest speed in either direction. Read the peak in the other direction from the chart by hovering. In time domain, read the two stroke times from the displacement plot. Record in the table below and save as `data/exp2_quick_return.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Measurement | e = 0 mm | e = 20 mm | e = -20 mm |
+| Measurement | $e = 0\ \text{mm}$ | $e = 20\ \text{mm}$ | $e = -20\ \text{mm}$ |
 |-------------|----------|-----------|------------|
 | Max velocity (mm/s) | | | |
 | Min velocity (mm/s) | | | |
@@ -371,45 +377,57 @@ plt.savefig('plots/experiment_2_quick_return.png', dpi=150)
 plt.show()
 ```
 
+### Expected Results
+
+- At $e = 0$ the two velocity peaks are equal, $331.3\ \text{mm/s}$ each way, and the ratio is 1
+- At $e = 20\ \text{mm}$ the peaks are $349.4$ and $320.2\ \text{mm/s}$ and the dead centers move to 5.7 and 191.5 degrees. One stroke takes 185.8 degrees of crank and the other 174.2, a ratio of 1.07 (0.516 s against 0.484 s at 60 RPM)
+- At $e = -20\ \text{mm}$ the two directions change places
+
 ### Design Question
 
-With r = 50 mm and l = 150 mm, find the strongest quick-return you can reach by raising the offset to the slider's limit of e = 50 mm, and read the ratio in the time domain (it is only about 1.2). Now reason about why an offset slider-crank cannot reach the 1.7-plus ratio a real shaper needs: the offset must stay below l - r for the mechanism to assemble, and the stroke stays close to 2r, so the asymmetry it can produce is limited. This ceiling is exactly why production shapers use the **crank-and-slotted-lever** mechanism instead, worked through in the [planar-mechanics quick-return application](/education/planar-mechanics/position-analysis-planar-linkages#application-5-quick-return-position-a-slider-crank-inversion). For a ready-made strong case here, the **Quick-Return (offset)** preset (r = 60, l = 120, e = 50) reaches a ratio of about 1.6.
+With $r = 50\ \text{mm}$ and $l = 150\ \text{mm}$, raise the offset to the slider's limit of $e = 50\ \text{mm}$ and read the ratio in the time domain (it is only about 1.2). Why can an offset slider-crank not reach the ratio of 1.7 or more that a real shaper needs? The offset must stay below $l - r$ for the mechanism to assemble. This limit is why production shapers use the **crank-and-slotted-lever** mechanism, worked through in the [planar-mechanics quick-return application](/education/planar-mechanics/position-analysis-planar-linkages/#application-5-quick-return-position-a-slider-crank-inversion). For a strong case here, set $r = 60$, $l = 120$, $e = 50$ (the **Quick-Return (offset)** preset, where the simulator lists it): the ratio is about 1.6.
 
 ## Experiment 3: Rod-to-Crank Ratio and Smoothness
 
 <InArticleAd />
 
 
-Every textbook states "use an l/r ratio between 3 and 5" as a design rule. But why? What actually goes wrong at l/r = 2 or l/r = 1.5? The answer involves three things happening simultaneously: acceleration spikes become severe (meaning higher inertia forces on bearings), the connecting rod swings through dangerously large angles (increasing side loads on the slider), and the transmission angle drops toward the zone where the mechanism jams under load. No single equation shows all three effects together. Only by sweeping the ratio and watching all the charts change at once can you see why the rule exists and where the real boundaries are.
+A shorter connecting rod makes the whole machine shorter, lighter and cheaper, so every designer is tempted to cut it. The usual rule is to keep $l/r$ between 3 and 5. What goes wrong at $l/r = 2$ or $1.5$? Three things at once:
+
+- the peak acceleration rises, so the inertia forces on the bearings rise
+- the rod swings through a larger angle, so it pushes the slider harder against the side of its guide
+- the transmission angle falls toward the zone where the mechanism jams under load
+
+Change the ratio and watch all three charts to see why the rule exists.
 
 :::note[Objective]
-Discover why real mechanisms use l/r between 3 and 5 by observing the simultaneous degradation of acceleration, rod angle, and transmission angle at low ratios.
+Discover why real mechanisms use $l/r$ between 3 and 5 by observing the simultaneous degradation of acceleration, rod angle, and transmission angle at low ratios.
 :::
 
 <Steps>
-1. **Low ratio (l/r = 2)**
-   Set r = 50 mm, l = 100 mm, e = 0 mm, 60 RPM. Run the experiment. Note the acceleration peaks and the rod angle range.
+1. **Low ratio ($l/r = 2$)**
+   Set $r = 50\ \text{mm}$, $l = 100\ \text{mm}$, $e = 0\ \text{mm}$, 60 RPM. Run the experiment. Note the acceleration peaks and the rod angle range.
 
 2. **Save as Experiment A**
 
-3. **High ratio (l/r = 4)**
-   Set r = 50 mm, l = 200 mm. Run the experiment.
+3. **High ratio ($l/r = 4$)**
+   Set $r = 50\ \text{mm}$, $l = 200\ \text{mm}$. Run the experiment.
 
 4. **Compare the overlaid charts**
    Focus on: acceleration magnitude, connecting rod angle range, and transmission angle minimum.
 
-5. **Try l/r = 1.5**
-   Set r = 50 mm, l = 75 mm. This is below the typical design range. Observe the extreme angles and acceleration spikes.
+5. **Try $l/r = 1.5$**
+   Set $r = 50\ \text{mm}$, $l = 75\ \text{mm}$. This is below the typical design range. Observe the extreme angles and acceleration spikes.
 
 6. **Collect data**
-   For each ratio, read peak acceleration, max rod angle, and min transmission angle from the summary panels. Record in the table and save as `data/exp3_rod_ratio.csv`. Alternatively, download the CSV from the simulator for each configuration.
+   For each ratio, read the peak acceleration (the larger in size of Maximum and Minimum Acceleration), Max Rod Angle and Min Transmission Angle from the summary panels. Record in the table and save as `data/exp3_rod_ratio.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Measurement | l/r = 1.5 | l/r = 2 | l/r = 3 | l/r = 4 |
+| Measurement | $l/r = 1.5$ | $l/r = 2$ | $l/r = 3$ | $l/r = 4$ |
 |-------------|-----------|---------|---------|---------|
-| Peak acceleration (mm/s^2) | | | | |
+| Peak acceleration ($\text{mm/s}^2$) | | | | |
 | Max rod angle (degrees) | | | | |
 | Min transmission angle (degrees) | | | | |
 | Rod/crank warning? | | | | |
@@ -464,7 +482,7 @@ for i, ratio in enumerate(ratios):
     Q = np.sqrt(l**2 - S**2)
     a_anal = omega**2 * (-r*cosT + r*sinT*S/Q - r**2*cosT**2*l**2/Q**3)
     rod_anal = np.degrees(np.arcsin(S / l))
-    trans_anal = np.degrees(np.arccos(np.clip(Q / l, -1, 1)))
+    trans_anal = 90 - np.abs(rod_anal)   # angle between rod and the normal to the slider path
 
     label = f'l/r={ratio}'
     if ratio in sim_datasets:
@@ -503,16 +521,17 @@ plt.show()
 
 ### Expected Results
 
-- Higher l/r ratios produce smoother acceleration profiles (closer to pure sinusoidal)
-- At l/r = 1.5, the rod angle exceeds 40 degrees and the mechanism is impractical
-- The simulator should display a rod/crank warning at l/r below 2.0
+- Higher $l/r$ ratios produce smoother acceleration profiles (closer to pure sinusoidal)
+- At $l/r = 1.5$, the rod angle reaches about 41.8 degrees, so the minimum transmission angle is about 48.2 degrees, close to the 40 degree limit; at $l/r = 2$ they are 30 and 60 degrees, and at $l/r = 4$ about 14.5 and 75.5 degrees
+- With $r = 50\ \text{mm}$ at 60 RPM the peak acceleration falls from about $3290\ \text{mm/s}^2$ at $l/r = 1.5$ to 2961 at $l/r = 2$, 2632 at $l/r = 3$ and 2467 at $l/r = 4$
+- The simulator should display a rod/crank warning at $l/r$ below 2.0
 
 ## Experiment 4: Breaking the Mechanism
 
 <InArticleAd />
 
 
-In a real workshop, building a mechanism with a connecting rod shorter than the crank would waste material, time, and possibly injure someone when it locks up mid-cycle. In the simulator, you can break mechanisms for free and learn exactly why they fail. This experiment shows you the geometric limit that every crank-slider must satisfy: the rod must be long enough to reach the slider at every crank angle. You will find the exact angle where the mechanism becomes impossible and derive the constraint from first principles. This is knowledge that prevents costly design errors before they reach the shop floor.
+A crank-slider whose rod is too short locks partway through the turn. With a motor behind it, that bends the rod or breaks the crank pin, and it can injure someone. In the simulator it costs nothing. The rod must be long enough to reach from the crank end to the slider path at every crank angle. You will find the angle where that fails and work out the rule.
 
 :::note[Objective]
 Find the geometric constraint that separates a working mechanism from an impossible one, and observe the failure at the exact angle.
@@ -520,44 +539,25 @@ Find the geometric constraint that separates a working mechanism from an impossi
 
 <Steps>
 1. **Start with a working mechanism**
-   Set r = 50 mm, l = 150 mm, e = 0. Run the experiment. Everything works.
+   Set $r = 50\ \text{mm}$, $l = 150\ \text{mm}$, $e = 0$. Run the experiment. Everything works.
 
 2. **Gradually reduce the rod**
-   Change l to 100 mm (l = 2r, barely works). Run and observe.
+   Change $l$ to $100\ \text{mm}$ ($l = 2r$, still works, with the rod swinging up to 30 degrees). Then set $l = 50\ \text{mm}$ ($l = r$): at 90 and 270 degrees the rod stands at a right angle to the slider path and only just reaches it.
 
-3. **Make l shorter than r**
-   Set l = 40 mm (l is less than r). Run the experiment.
+3. **Make $l$ shorter than $r$**
+   Set $l = 40\ \text{mm}$ ($l$ is less than $r$). Run the experiment.
 
-4. **Observe the animation**
-   Start the animation. At what angle does the mechanism stop working? The connecting rod is too short to reach the slider.
+4. **Watch the animation**
+   Start the animation. At what angle does the drawing give way to the message "Invalid configuration"? There the crank end is farther from the slider path than the rod is long.
 
 5. **Add offset and test the constraint**
-   Set r = 50 mm, l = 80 mm, e = 30 mm. The constraint is l must be greater than or equal to r + |e|. Here 80 is less than 50 + 30 = 80. Test at exactly l = 80 and l = 79.
+   Set $r = 50\ \text{mm}$, $l = 80\ \text{mm}$, $e = 30\ \text{mm}$. The constraint is $l \geq r + \lvert e \rvert$. Here $l = 80$ equals $50 + 30 = 80$, so this is exactly the limit. Test at exactly $l = 80$ and $l = 79$.
 
 6. **Collect data**
-   For each configuration, note whether the experiment completes a full 360 degrees and at what angle (if any) it fails. Save as `data/exp4_breaking.csv` with columns: r, l, e, works (yes/no), fail_angle.
+   For each of the six configurations, note whether the experiment completes a full 360 degrees and at what angle (if any) it fails. Save as `data/exp4_breaking.csv` with columns: r, l, e, works (yes/no), fail_angle.
 </Steps>
 
-The geometric constraint determines whether the connecting rod can reach the slider at every crank angle. The worst case is when the crank points straight up (theta = 90 degrees), maximizing the vertical distance the rod must span:
-
-```mermaid
-flowchart TB
-    A["l >= r + abs(e)?"] -->|Yes| B["Mechanism works at all angles"]
-    A -->|No| C["Rod too short at some angles"]
-    C --> D["Fails near theta = 90 degrees"]
-    C --> E["sqrt term goes negative"]
-    B --> F["Full 360 degree rotation possible"]
-```
-
-### Data Collection Table
-
-| Configuration | Works? | Fails at angle? | l vs r + abs(e) |
-|---------------|--------|-----------------|-------------------------------|
-| r=50, l=150, e=0 | | | |
-| r=50, l=50, e=0 | | | |
-| r=50, l=40, e=0 | | | |
-| r=50, l=80, e=30 | | | |
-| r=50, l=79, e=30 | | | |
+The worst case is when the crank stands at a right angle to the slider path ($\theta = 90^\circ$ or $270^\circ$), because the crank end is then farthest from the path.
 
 ### Analysis Question
 
@@ -571,15 +571,17 @@ For the mechanism to work at all angles, what must be true about the term under 
 
 - The constraint is $l \geq r + |e|$
 - Failure occurs when $r\sin\theta - e$ exceeds $l$ in magnitude
-- The critical angle is $\theta = 90$ degrees (for e = 0), where $r\sin\theta$ is maximized
-- With offset, the critical angle shifts
+- The critical angles are $\theta = 90^\circ$ and $270^\circ$ (for $e = 0$), where $\lvert r\sin\theta \rvert$ is maximized
+- With a positive offset only $\theta = 270^\circ$ is critical, where $\lvert r\sin\theta - e \rvert = r + e$; with a negative offset it is $\theta = 90^\circ$
+- With $r = 50$, $l = 40$, $e = 0$ the rod first fails to reach at $\theta = \sin^{-1}(40/50) \approx 53.1^\circ$
+- With $r = 50$, $e = 30$: $l = 80$ still works (the rod only just reaches at $270^\circ$), and $l = 79$ fails between $258.5^\circ$ and $281.5^\circ$
 
 ## Experiment 5: Dead Centers and Mechanical Advantage
 
 <InArticleAd />
 
 
-At two specific positions in every crank-slider cycle, the slider velocity drops to zero and the mechanical advantage spikes toward infinity. These are the dead centers, and they are simultaneously the most dangerous and the most useful positions in the mechanism. Dangerous because the mechanism can stall if it stops exactly at a dead center (there is zero torque to restart it). Useful because machines like toggle clamps, coining presses, and injection molding machines are deliberately designed to do their work at dead center, where the force multiplication is highest. You cannot appreciate this duality from an equation; you need to watch the mechanism crawl near dead center and race through mid-stroke to feel the difference.
+A piston engine that stops with its crank and rod in one line cannot be started by pushing on the piston: the push goes straight through the pivot and turns nothing. The same position lets a press squeeze with a very large force from a small motor. These positions are the dead centers. There the slider velocity is zero and the mechanical advantage (slider force for each unit of crank torque) grows without limit. A designer must know which machines should work at a dead center and which must never stop there.
 
 :::note[Objective]
 Observe the dead center singularities in velocity, MA, and torque, and understand why machines exploit or avoid these positions.
@@ -587,34 +589,37 @@ Observe the dead center singularities in velocity, MA, and torque, and understan
 
 <Steps>
 1. **Configure**
-   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 30 RPM (slow for observation), slider force = 500 N.
+   Set $r = 50\ \text{mm}$, $l = 150\ \text{mm}$, $e = 0\ \text{mm}$, speed = 30 RPM (slow for observation), slider force = 500 N.
 
 2. **Run the experiment**
-   Focus on the mechanical advantage chart and the crank torque chart.
+   Open the Mechanical Advantage chart and the Force Analysis (crank torque) chart.
 
-3. **Observe the animation**
-   Start the animation at low speed. Enable the crank path (locus). Watch the slider crawl near TDC and BDC, then race through mid-stroke.
+3. **Watch the animation**
+   Start the animation at low speed with "Show Crank Path (Locus)" on. The slider hardly moves near TDC and BDC and moves fastest near mid-stroke, while the crank turns steadily.
 
 4. **Pause at TDC (0 degrees)**
-   Use the manual angle control. Set to 0 degrees. Read the mechanical advantage value. What happens to crank torque?
+   Use the manual angle control. Set to 0 degrees. The crank torque is zero. The simulator also prints MA as 0 at exactly 0 and 180 degrees, because the true value there has no upper limit and cannot be printed.
 
 5. **Sweep through dead center**
-   Slowly move from 350 degrees to 10 degrees. Watch MA spike and torque pass through zero.
+   Slowly move from 350 degrees to 10 degrees. MA rises steeply as you approach 0 from either side, and the torque changes sign as it passes through zero.
 
 6. **Collect data**
-   Use the manual angle control to set each angle in the table. Read displacement from the animation labels, velocity and torque from the charts (hover at the corresponding angle), and MA from the mechanical advantage summary. Save as `data/exp5_dead_centers.csv`. Alternatively, download the CSV from the simulator.
+   Use the manual angle control to set each angle in the table. Read displacement from the animation labels, and velocity, MA and torque from the charts (hover at the angle). Save as `data/exp5_dead_centers.csv`.
 </Steps>
 
-At dead centers, the crank and connecting rod become collinear:
+At the dead centers the crank and the connecting rod lie in one line. At TDC they are stretched out. At BDC the crank is folded back over the rod:
 
 ```text
-    TDC (theta = 0):                   BDC (theta = 180):
+  TDC (theta = 0), slider at r + l from the pivot
 
-    O----r----+========l========[S]    [S]========l========+----r----O
-    pivot     crank end         slider  slider         crank end    pivot
-              (max extension)                          (min extension)
+    O-----r-----+===============l===============[S]
+  pivot     crank end                          slider
 
-    velocity = 0, MA --> infinity      velocity = 0, MA --> infinity
+  BDC (theta = 180), slider at l - r from the pivot
+
+    +-----r-----O
+    +===============l===============[S]
+  crank end   pivot                  slider
 ```
 
 ### Data Collection Table
@@ -712,6 +717,12 @@ for angle in [0, 30, 60, 90, 120, 150, 180]:
           f"MA={ma_anal[angle]:.4f}, T={torque_anal[angle]:.4f} Nm")
 ```
 
+### Expected Results
+
+- At 0 and 180 degrees the velocity and the crank torque are zero
+- At 30, 90 and 150 degrees the velocity is $-101.5$, $-157.1$ and $-55.6\ \text{mm/s}$ (minus: the slider moves toward the pivot), MA is 0.0309, 0.0200 and 0.0566 per mm, and the torque is $-16.16$, $-25.00$ and $-8.84\ \text{Nm}$
+- MA is smallest, about 0.019 per mm, near 73 degrees, where the torque is largest ($26.4\ \text{Nm}$). It rises without limit toward each dead center
+
 ### Design Question
 
 A coining press needs maximum force at the bottom of its stroke. Should the pressing action happen at TDC, BDC, or mid-stroke? Why? What does this tell you about where to position the workpiece relative to the dead center?
@@ -721,7 +732,9 @@ A coining press needs maximum force at the bottom of its stroke. Should the pres
 <InArticleAd />
 
 
-An electric motor delivers roughly constant torque. A crank-slider mechanism demands wildly varying torque through its cycle. This mismatch is the reason every reciprocating engine, compressor, and pump has a flywheel. But how big should that flywheel be? The answer depends on how much the torque varies, which depends on the slider force, the speed, and the geometry. Without computing the full torque curve and integrating the energy fluctuation, you are guessing at flywheel size. This experiment gives you the torque data to make that calculation properly.
+An electric motor delivers roughly constant torque. A crank-slider that pushes against a load asks for a torque that swings from zero to a peak and back twice in every turn. A motor sized for the average torque stalls at the peak, which is why piston engines, compressors and pumps have a flywheel.
+
+The torque follows from power: the power the crank puts in equals the power the slider gives out. So torque times crank speed equals force times slider speed, $T\,\omega = F\,v$, or $T = F\,v/\omega$, with $T$ the crank torque, $F$ the slider force, $v$ the slider velocity and $\omega$ the crank speed in $\text{rad/s}$. (The simulator leaves out the inertia of the links.) This experiment gives you the torque curve that motor and flywheel sizing start from.
 
 :::note[Objective]
 Compute full-cycle torque curves at different speeds and forces, and estimate the energy fluctuation that determines flywheel sizing.
@@ -729,18 +742,18 @@ Compute full-cycle torque curves at different speeds and forces, and estimate th
 
 <Steps>
 1. **Low force, low speed**
-   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 30 RPM, slider force = 200 N. Run the experiment. Note the peak crank torque.
+   Set $r = 50\ \text{mm}$, $l = 150\ \text{mm}$, $e = 0\ \text{mm}$, speed = 30 RPM, slider force = 200 N. Run the experiment. Note the peak crank torque.
 
 2. **Save as Experiment A**
 
 3. **Same force, higher speed**
-   Change speed to 120 RPM. Run the experiment. Compare the torque curves.
+   Change speed to 120 RPM. Run the experiment. Compare the torque curves. They coincide, because the slider velocity $v$ is proportional to $\omega$, so the speed cancels out of $T = F\,v/\omega$.
 
 4. **Higher force**
-   Clear Experiment A. Set F = 800 N, speed = 30 RPM. Save as Experiment A. Then set F = 800 N, speed = 120 RPM. Run and compare.
+   Clear Experiment A. Set $F = 800\ \text{N}$, speed = 30 RPM. Save as Experiment A. Then set $F = 800\ \text{N}$, speed = 120 RPM. Run and compare.
 
 5. **Record your data**
-   Fill in the data collection table below by reading values from the chart summary panels. Save your recordings as a CSV file (columns: configuration, max_velocity, min_velocity, peak_torque) for Python analysis.
+   For each of the four runs, read Maximum Velocity and Max Crank Torque from the summary panels. Save them as a CSV file (columns: configuration, max_velocity, peak_torque).
 </Steps>
 
 ### Python Analysis
@@ -817,16 +830,21 @@ plt.savefig('plots/experiment_6_torque.png', dpi=150)
 plt.show()
 ```
 
+### Expected Results
+
+- The peak torque is $10.55\ \text{Nm}$ at 200 N and $42.19\ \text{Nm}$ at 800 N (the force multiplied by $52.7\ \text{mm}$), near 73 and 287 degrees, and it is the same at 30 and at 120 RPM
+- The script uses 500 N and prints $26.37\ \text{Nm}$ and 100 J per cycle at every speed: the force multiplied by the $0.1\ \text{m}$ stroke, twice
+
 ### Design Question
 
-The torque curve shows large variations through the cycle. A motor delivering constant torque would alternately accelerate and decelerate the crank. How would you size a flywheel to smooth this out? The energy stored in a flywheel is $E = \frac{1}{2}I\omega^2$. From your torque data, estimate the energy fluctuation per cycle.
+The torque curve varies widely through the cycle. A motor delivering constant torque would alternately accelerate and decelerate the crank. How would you size a flywheel to smooth this out? The energy stored in a flywheel is $E = \frac{1}{2}I\omega^2$, with $I$ its moment of inertia. From your torque data, estimate the energy fluctuation per cycle.
 
 ## Experiment 7: Comparing Presets (Real Applications)
 
 <InArticleAd />
 
 
-An IC engine, an air compressor, and a hydraulic press are all crank-slider mechanisms. Yet they look different, run at different speeds, and have different proportions. Why? Because each machine optimizes for something different: the engine wants smooth, balanced, high-speed motion; the compressor wants efficient compression at moderate speed; the press wants maximum force at low speed with a quick return. By overlaying their kinematic profiles on the same charts, you can see exactly how the same four parameters (r, l, e, speed) create three fundamentally different machines. This is design thinking: understanding which parameter serves which purpose.
+A petrol engine (IC means internal combustion), an air compressor and a press are all crank-sliders, yet a designer who copies the proportions of one for another gets a poor machine. The engine needs smooth motion at high speed, the compressor a steady stroke at moderate speed, and the press a large force at low speed. This experiment puts their motion on the same charts, so that you can see which of the four settings ($r$, $l$, $e$, speed) serves which need.
 
 :::note[Objective]
 Compare the three real-world application presets side by side, plus the quick-return demonstration, and identify which parameter choices serve which engineering goals.
@@ -834,45 +852,47 @@ Compare the three real-world application presets side by side, plus the quick-re
 
 <Steps>
 1. **IC Engine preset**
-   Select the IC Engine preset (r=40, l=160, e=0, 60 RPM, F=500 N). Run the experiment. Save as Experiment A.
+   Select the IC Engine preset ($r=40$, $l=160$, $e=0$, 60 RPM, $F=500\ \text{N}$). Run the experiment. Save as Experiment A.
 
 2. **Hydraulic Press preset**
-   Select the Hydraulic Press preset (r=60, l=180, e=10, 30 RPM, F=800 N). Run the experiment.
+   Select the Hydraulic Press preset ($r=60$, $l=180$, $e=10$, 30 RPM, $F=800\ \text{N}$). Run the experiment.
 
 3. **Compare the overlaid charts**
    Note the differences in velocity profiles (symmetry vs asymmetry), acceleration peaks, and torque curves.
 
 4. **Air Compressor preset**
-   Clear Experiment A. Select Air Compressor (r=30, l=120, e=0, 90 RPM, F=200 N). Compare with the previous two.
+   Clear Experiment A. Select Air Compressor ($r=30$, $l=120$, $e=0$, 90 RPM, $F=200\ \text{N}$). Compare with the previous two.
 
-5. **Quick-Return preset**
-   Select Quick-Return (offset) (r=60, l=120, e=50, 40 RPM, F=300 N). Its large offset makes the velocity profile the most asymmetric of the four: the forward and return strokes take clearly unequal times (ratio about 1.6).
+5. **Quick-return case**
+   Set $r=60$, $l=120$, $e=50$, 40 RPM, $F=300\ \text{N}$ by hand, or select the Quick-Return (offset) preset where the simulator lists it. Its large offset makes the velocity curve the most unequal of the four: the two strokes take clearly different times (ratio about 1.6).
 
 6. **Collect data**
-   For each preset, read the stroke, peak velocity, peak acceleration, and peak torque from the summary panels. Calculate the l/r ratio by hand. Record in the table and save as `data/exp7_presets.csv`. Alternatively, download the CSV from the simulator for each preset.
+   For each case, read the stroke, peak velocity, peak acceleration, and peak torque from the summary panels. Calculate the $l/r$ ratio by hand. Record them in a table with the rows shown below, before you look at its values, and save as `data/exp7_presets.csv`.
 </Steps>
 
-### Data Collection Table
+### Expected Results
 
 | Measurement | IC Engine | Air Compressor | Hydraulic Press | Quick-Return |
 |-------------|-----------|----------------|-----------------|--------------|
-| Stroke (mm) | | | | |
-| l/r ratio | | | | |
-| Peak velocity (mm/s) | | | | |
-| Peak acceleration (mm/s^2) | | | | |
-| Peak torque (Nm) | | | | |
-| Quick-return ratio | | | | |
+| Stroke (mm) | 80.0 | 60.0 | 120.2 | 139.7 |
+| $l/r$ ratio | 4 | 4 | 3 | 2 |
+| Peak velocity (mm/s) | 259 | 291 | 203 | 420 |
+| Peak acceleration ($\text{mm/s}^2$) | 1974 | 3331 | 791 | 2435 |
+| Peak torque (Nm) | 20.6 | 6.19 | 51.6 | 30.1 |
+| Quick-return ratio | 1.00 | 1.00 | 1.03 | 1.58 |
+
+The $10\ \text{mm}$ offset of the press preset gives a ratio of only 1.03: it shows the idea, but the effect is small.
 
 ### Analysis Question
 
-Why does the hydraulic press have an offset but the IC engine doesn't? Think about what each machine optimizes for: the engine wants symmetric, balanced motion at high speed; the press wants asymmetric motion with a slow power stroke and fast return.
+Why does the hydraulic press have an offset but the IC engine does not? Think about what each machine needs: the engine needs equal, balanced strokes at high speed; the press gains from a slow power stroke and a fast return.
 
 ## Experiment 8: Parametric Sensitivity Study
 
 <InArticleAd />
 
 
-When a mechanism fails in service, it is usually because the inertia forces exceeded what the bearings or connecting rod could handle. Peak acceleration is the single number that determines inertia loading. But which design parameter has the strongest effect on it? If you need to reduce peak acceleration by 50%, should you shorten the crank, lengthen the rod, or slow down the motor? The answer is not intuitive: acceleration scales with the *square* of speed, meaning that doubling the RPM quadruples the peak acceleration. This experiment quantifies the sensitivity to each parameter, giving you the data to make rational design trade-offs instead of guessing.
+The force that the bearings and the rod must carry to reverse the slider is its mass multiplied by its acceleration, so peak acceleration decides the inertia load. Suppose you must halve it. Should you shorten the crank, lengthen the rod, or slow the motor? The three do not count equally: acceleration grows with the *square* of speed. This experiment measures the effect of each setting, so that you can choose with data.
 
 :::note[Objective]
 Quantify how crank length, rod length, and speed each affect peak acceleration, and identify which parameter dominates.
@@ -880,19 +900,19 @@ Quantify how crank length, rod length, and speed each affect peak acceleration, 
 
 <Steps>
 1. **Baseline**
-   Set r = 50 mm, l = 150 mm, e = 0 mm, speed = 60 RPM. Record peak acceleration.
+   Set $r = 50\ \text{mm}$, $l = 150\ \text{mm}$, $e = 0\ \text{mm}$, speed = 60 RPM. Record peak acceleration.
 
 2. **Vary crank length**
-   Change r to 40, 50, 60, 70 mm (keep l = 150, e = 0, 60 RPM). Record peak acceleration for each.
+   Change $r$ to 40, 50, 60, 70 mm (keep $l = 150$, $e = 0$, 60 RPM). Record peak acceleration for each.
 
 3. **Vary rod length**
-   Reset r = 50. Change l to 100, 125, 150, 175, 200 mm. Record peak acceleration for each.
+   Reset $r = 50$. Change $l$ to 100, 125, 150, 175, 200 mm. Record peak acceleration for each.
 
 4. **Vary speed**
-   Reset l = 150. Change speed to 30, 60, 90, 120 RPM. Record peak acceleration for each.
+   Reset $l = 150$. Change speed to 30, 60, 90, 120 RPM. Record peak acceleration for each.
 
 5. **Record your data**
-   For each configuration, read the peak acceleration from the summary panel and record it in the table below. Save as a CSV file (columns: parameter_name, value, peak_acceleration) for the Python analysis.
+   For each configuration, read the peak acceleration from the summary panel. Save as a CSV file (columns: parameter_name, value, peak_acceleration).
 </Steps>
 
 ### Python Analysis
@@ -1002,14 +1022,14 @@ print(f"Doubling speed 60->120 RPM: {peak_accel(50,150,0,120)/peak_accel(50,150,
 
 ### Expected Results
 
-- Peak acceleration scales linearly with crank length r
-- Peak acceleration decreases with increasing rod length l (diminishing returns above l/r = 4)
-- Peak acceleration scales with the **square** of speed (doubling RPM quadruples peak acceleration)
+- Peak acceleration rises a little faster than linearly with crank length $r$, because at TDC $a_{\max} = r\omega^2(1 + r/l)$: about 2000, 2632, 3316 and 4053 $\text{mm/s}^2$ for $r$ = 40, 50, 60 and 70 mm
+- Peak acceleration decreases with increasing rod length $l$ (diminishing returns above $l/r = 4$): about 2961, 2763, 2632, 2538 and 2467 $\text{mm/s}^2$ for $l$ = 100, 125, 150, 175 and 200 mm
+- Peak acceleration scales with the **square** of speed (doubling RPM quadruples peak acceleration: about 658, 2632, 5922 and 10528 $\text{mm/s}^2$ at 30, 60, 90 and 120 RPM)
 - Speed is the dominant parameter: this is why high-RPM engines face severe inertia loads
 
 ### Design Question
 
-You are designing a mechanism that must keep peak acceleration below 5000 mm/s^2. Using your sensitivity data, what combinations of r, l, and RPM satisfy this constraint? Is there a single "best" design, or is it a trade-off?
+You are designing a mechanism that must keep peak acceleration below $5000\ \text{mm/s}^2$. Using your sensitivity data, what combinations of $r$, $l$, and RPM satisfy this constraint? Is there a single "best" design, or is it a trade-off?
 
 ## Writing Your Lab Report
 
@@ -1019,16 +1039,10 @@ You are designing a mechanism that must keep peak acceleration below 5000 mm/s^2
 After completing all experiments, compile your findings into a lab report:
 
 1. State the objective of each experiment and the parameters you used
-2. Present your data collection tables with the values you recorded from the simulator
-3. Include the plots generated by the Python scripts as figures
-4. For each experiment, compare your hand-calculated predictions with the simulator values and discuss any discrepancies
-5. Answer the design questions, referencing specific data from your experiments
-
-The simulator also includes a downloadable report template and design specification in the downloads section, which can serve as a starting point.
-
-For a complete discussion of the simulator's capabilities, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) product page.
-
-To build a physical 3D model of the mechanism you analyzed, follow the [Slider Crank Mechanism Design](/education/parametric-mechanical-cad-freecad/slider-crank-mechanism) lesson using FreeCAD.
+2. Present your data tables with the values you recorded
+3. Include the plots from the Python scripts as figures
+4. Compare your predictions with the simulator values and discuss any differences
+5. Answer the design questions with data from your experiments
 
 <MechanismDesignSimulationComments />
 

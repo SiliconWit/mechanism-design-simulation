@@ -25,14 +25,45 @@ import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/sta
 
 import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
-A scissor lift looks simple: two crossed arms, a platform, and a hydraulic cylinder. But try answering this without a simulator: if you double the number of stages, does the actuator force double too? What about stability? And what happens to power requirements when the lift is nearly collapsed versus nearly vertical? These experiments take you from the basic height equation through actuator sizing, load distribution, and stability analysis, building the judgment needed to design lifts that actually work in the field. #ScissorLift #MechanismDesign #ForceAnalysis
+A scissor lift that is chosen only by its load and its top height can stall with the load on it, or lean when someone steps to the edge of the platform. Both failures come from the geometry of the crossed arms, and neither shows in a catalog table. In these nine experiments you measure them on a simulator: how the actuator force changes as the platform moves, what the actuator type and the number of stages do to that force, when an off-center load tips the lift, and how much power and arm strength the lift needs. #ScissorLift #MechanismDesign #ForceAnalysis
 
 :::tip[What you need]
 Open the [Scissor Lift Mechanism Simulator](/product-development/scissor-lift-mechanism-simulator/) in a separate browser tab. You will use it throughout all nine experiments. For data analysis, you need Python 3 with NumPy and Matplotlib.
 :::
 
 :::note[Related resources]
-Want to build a 3D model of this mechanism? See the [Scissor Lift Mechanism Design](/education/parametric-mechanical-cad-freecad/scissor-lift-mechanism) lesson in our FreeCAD course. For a feature overview of the simulator, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/scissor-lift-mechanism-simulator) page.
+Want to build a 3D model of this mechanism? See the [Scissor Lift Mechanism Design](/education/parametric-mechanical-cad-freecad/scissor-lift-mechanism/) lesson in our FreeCAD course. For a feature overview of the simulator, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/scissor-lift-mechanism-simulator) page.
+:::
+
+## How a scissor lift works
+
+A scissor lift is a platform on crossed arms that are joined by a pin at their middle, like a pair of scissors. A car jack, a lifting table in a workshop, and a work platform for reaching a ceiling all use it. An actuator, which is a hydraulic cylinder or a screw, pulls the feet of the arms toward each other. The arms stand up and the platform rises.
+
+```text
+          load W
+   +-----------------+   platform
+    \               /
+      \           /
+        \       /        each arm has length L
+          \   /
+            o   <------- crossing pin
+          /   \
+        /       \
+      /  θ        \
+    o---------------o    the actuator pulls the feet
+    |<----- S ----->|    together with force F
+```
+
+The surprise is where the lift needs its force. Near the folded position, a small movement of the feet raises the platform a long way. The actuator must do the same work over a shorter distance, so it needs a larger force. In words: the actuator force is the load, times the number of stages, divided by the tangent of the arm angle.
+
+$$
+F = \frac{n\,W_{\text{eff}}}{\tan\theta}
+$$
+
+$F$ is the actuator force, $W_{\text{eff}}$ the platform load plus half the weight of the arms, $n$ the number of stages, and $\theta$ the angle of an arm above the horizontal. A small angle has a small tangent, so the force is large: the lift of the first experiment needs 951 N at 30 degrees and 3114 N at 10 degrees. A scissor lift needs its greatest force at its lowest position, where there is the least room for an actuator, so every real lift has a lowest working angle.
+
+:::caution[Simulator only]
+A raised lift holds stored energy: if a pin, a hose, or a screw fails, the platform falls. Do these experiments on the simulator. Never overload or tilt a real lift to test it, and never reach between the arms of a raised lift that is not propped.
 :::
 
 ## Reference
@@ -40,27 +71,18 @@ Want to build a 3D model of this mechanism? See the [Scissor Lift Mechanism Desi
 | Term | Meaning |
 |------|---------|
 | **L** | Link length: the length of each scissor arm (mm) |
-| **θ (theta)** | Half-angle from horizontal. At θ = 0 the lift is fully collapsed; at θ = 90 it would be fully vertical |
-| **h** | Platform height: h = n L sin(θ) for n stages |
-| **S** | Spread: horizontal distance between base pivots, S = L cos(θ) |
-| **P** | Platform load (N), applied as UDL or point load |
+| **$\theta$ (theta)** | Angle of an arm above the horizontal; $0^\circ$ is folded flat |
+| **h** | Platform height: $h = nL\sin\theta$ for $n$ stages |
+| **S** | Spread: horizontal distance between base pivots, $S = L\cos\theta$ |
+| **P** | Platform load (N), spread evenly (a uniform distributed load, UDL) or placed at one point |
 | **F** | Actuator force: the force the hydraulic cylinder or lead screw must exert |
-| **MA** | Mechanical advantage: P / F. Varies continuously with angle |
+| **Stroke** | The distance the actuator travels from the lowest to the highest position |
+| **MA** | Mechanical advantage, $P / F$. Below 1, the actuator pushes harder than the load weighs |
 | **n** | Number of scissor stages (1 to 3). Each stage adds one full link height |
-| **Symmetric** | Both base pivots slide. Load shared by mechanism geometry |
-| **Left-pinned** | One base pivot is fixed (pinned to ground). Single actuator bears full load |
-
-### Experiment Workflow
-
-```mermaid
-flowchart TD
-    A[Predict] --> B[Configure Simulator]
-    B --> C[Run Experiment]
-    C --> D[Read Charts and Panels]
-    D --> E[Record in CSV]
-    E --> F[Run Python Script]
-    F --> G[Compare and Analyze]
-```
+| **Symmetric** | Both base pivots slide, so the scissor stays centered under the platform |
+| **Left-pinned** | One base pivot is fixed (pinned to ground). The actuator force is the same, but the scissor center moves sideways as the lift rises |
+| **CoG** | Center of gravity: the point where the whole weight can be taken to act |
+| **Tipping angle** | The tilt at which the lift would fall over; larger is safer. The simulator's safety factor is the tipping angle divided by 5 degrees |
 
 ### Workspace Setup
 
@@ -84,10 +106,10 @@ A scissor lift fails dangerously, by overload and by side instability, and both 
 <InArticleAd />
 
 
-Most engineers know that a scissor lift's height is h = L sin(θ), but fewer appreciate what this means for the actuator. The sinusoidal height curve hides a force curve that goes to infinity near collapse. This experiment maps both curves and reveals why every real scissor lift has a minimum operating angle.
+An actuator that is too weak for the lowest position cannot start the lift, however easily it holds the load higher up. The height rises with the sine of the arm angle, $h = L\sin\theta$, while the force falls with the tangent. This experiment maps both curves for one lift and shows why a real scissor lift never starts from flat.
 
 :::note[Objective]
-Verify the height equation h = n L sin(θ) and the actuator force equation F = W_eff / (2 tan θ) for a symmetric horizontal-base configuration. Understand why actuator force spikes at low angles.
+Verify the height equation $h = nL\sin\theta$ and the actuator force equation $F = \dfrac{n\,W_{\text{eff}}}{\tan\theta}$ for a horizontal-base actuator (a cylinder that joins the two base pivots). Explain why the actuator force rises so fast at low angles.
 :::
 
 <Steps>
@@ -95,10 +117,10 @@ Verify the height equation h = n L sin(θ) and the actuator force equation F = W
    Set L = 300 mm, Base Width = 400 mm, 1 stage, symmetric configuration, horizontal-base actuator, Platform Load = 500 N, Link Mass = 5 kg. Set operating range to 10 to 80 degrees.
 
 2. **Predict**
-   Calculate by hand: at θ = 30, h should be 300 sin(30) = 150 mm. The effective load is 500 + 2(1)(5)(9.81)/2 = 549.05 N. Actuator force should be 549.05 / (2 tan 30) = 475.5 N.
+   Calculate by hand at $\theta = 30^\circ$. The height should be $300\sin 30^\circ = 150\ \text{mm}$. The effective load is the platform load plus half the weight of the two arms: $500 + \dfrac{2(1)(5)(9.81)}{2} = 549.05\ \text{N}$. The actuator force should be $\dfrac{549.05}{\tan 30^\circ} = 951.0\ \text{N}$.
 
 3. **Run the experiment**
-   Click "Run Full Experiment." Open the Platform Height tab and the Actuator Force tab. Compare the chart shapes.
+   Click "Run Full Experiment." Open the Platform Height tab and the Actuator Force tab. The height curve is steep at low angles and flattens near the top. The force curve is very high at low angles and almost flat above 45 degrees.
 
 4. **Record key values**
    Read the info bar at θ = 10, 20, 30, 45, 60, and 80 degrees (use the theta slider). Record h, F, and MA at each angle.
@@ -109,17 +131,6 @@ Verify the height equation h = n L sin(θ) and the actuator force equation F = W
 6. **Export charts**
    Download the Height and Actuator Force charts as PNG files to your plots folder.
 </Steps>
-
-### Data Collection Table
-
-| θ (deg) | h_sim (mm) | F_sim (N) | MA_sim |
-|---------|-----------|----------|--------|
-| 10 | | | |
-| 20 | | | |
-| 30 | | | |
-| 45 | | | |
-| 60 | | | |
-| 80 | | | |
 
 ### Python Analysis
 
@@ -150,7 +161,7 @@ theta_deg = np.linspace(5, 85, 200)
 theta_rad = np.deg2rad(theta_deg)
 
 height = n * L * np.sin(theta_rad)
-force = effective_load * n / (2 * np.tan(theta_rad))
+force = effective_load * n / np.tan(theta_rad)
 ma = P / force
 
 # STEP 3: Plot
@@ -167,7 +178,7 @@ axes[0].legend()
 axes[0].grid(True, alpha=0.3)
 
 # Force vs angle
-axes[1].plot(theta_deg, force, 'r-', linewidth=2, label='Analytical: F = W/(2 tan θ)')
+axes[1].plot(theta_deg, force, 'r-', linewidth=2, label='Analytical: F = W/tan θ')
 if sim_data is not None:
     axes[1].plot(sim_data[:, 0], sim_data[:, 2], 'bo', markersize=6, label='Simulator')
 axes[1].set_xlabel('θ (degrees)')
@@ -175,7 +186,7 @@ axes[1].set_ylabel('Force (N)')
 axes[1].set_title('Actuator Force vs Angle')
 axes[1].legend()
 axes[1].grid(True, alpha=0.3)
-axes[1].set_ylim(0, min(3000, max(force) * 1.1))
+axes[1].set_ylim(0, min(4000, max(force) * 1.1))
 
 # MA vs angle
 axes[2].plot(theta_deg, ma, 'g-', linewidth=2, label='MA = P / F')
@@ -190,17 +201,17 @@ axes[2].grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('plots/exp1_baseline.png', dpi=150, bbox_inches='tight')
 plt.show()
-print(f"\nAt θ=30°: h={n*L*np.sin(np.deg2rad(30)):.1f} mm, F={effective_load/(2*np.tan(np.deg2rad(30))):.1f} N")
-print(f"At θ=10°: F={effective_load/(2*np.tan(np.deg2rad(10))):.1f} N (note the spike)")
-print(f"At θ=80°: F={effective_load/(2*np.tan(np.deg2rad(80))):.1f} N (very low)")
+print(f"\nAt θ=30°: h={n*L*np.sin(np.deg2rad(30)):.1f} mm, F={effective_load/np.tan(np.deg2rad(30)):.1f} N")
+print(f"At θ=10°: F={effective_load/np.tan(np.deg2rad(10)):.1f} N (note the spike)")
+print(f"At θ=80°: F={effective_load/np.tan(np.deg2rad(80)):.1f} N (very low)")
 ```
 
 ### Expected Results
 
-- Height follows a clean sinusoidal curve from about 52 mm (at 10 degrees) to 295 mm (at 80 degrees)
-- Actuator force shows a sharp hyperbolic rise below 20 degrees, reaching over 1500 N at 10 degrees
-- At 45 degrees, the force equals about half the effective load (MA crosses 1.0 near this angle)
-- Mechanical advantage increases monotonically with angle: poor at low angles, excellent at high angles
+- Height rises along a sine curve from about 52 mm (at 10 degrees) to 295 mm (at 80 degrees)
+- Actuator force rises sharply below 20 degrees and passes 3100 N at 10 degrees, more than six times the platform load
+- At 45 degrees, the force equals the effective load (about 549 N, so MA is about 0.91); MA reaches 1.0 near 48 degrees
+- Mechanical advantage rises with the angle over the whole range: poor at low angles, high at high angles
 - The simulator and analytical values should match within 1%
 
 ### Design Question
@@ -214,7 +225,7 @@ A warehouse scissor lift must raise 2000 N from a minimum height of 200 mm to a 
 <InArticleAd />
 
 
-Three actuator types are available in the simulator: horizontal-base (hydraulic cylinder between base pivots), horizontal-center (lead screw at the arm midpoints), and diagonal (cylinder from base to partway up an arm). Each has different force, stroke, and efficiency characteristics. This experiment reveals which works best and when.
+Where the actuator is mounted decides how hard it must push and how far it must travel. The simulator has three mountings: horizontal-base (a hydraulic cylinder between the base pivots), horizontal-center (a lead screw, which is a threaded rod, that pulls the arm midpoints together), and diagonal (a cylinder from the base to a point partway along an arm). A mounting chosen only because it packs neatly can double the force on the actuator.
 
 :::note[Objective]
 Compare the actuator force, mechanical advantage, and power curves for all three actuator types on the same mechanism geometry. Identify which type requires the least peak force and which has the smoothest force curve.
@@ -228,7 +239,7 @@ Compare the actuator force, mechanical advantage, and power curves for all three
    Select "Horizontal Base" actuator. Click "Save as Experiment A." Note the peak force, min force, and actuator stroke from the results summary.
 
 3. **Run horizontal-center experiment**
-   Switch to "Horizontal Center (lead screw)" actuator. Click "Run Full Experiment." The overlay shows both curves.
+   Switch to "Horizontal Center (lead screw)" actuator. Click "Run Full Experiment." The overlay shows both curves. The lead screw curve should sit at twice the height of the first one at every angle.
 
 4. **Record and clear**
    Record the horizontal-center results. Click "Clear" on Experiment A.
@@ -237,16 +248,8 @@ Compare the actuator force, mechanical advantage, and power curves for all three
    Save horizontal-center as new Experiment A. Switch to "Diagonal" actuator. Run again to compare.
 
 6. **Collect data**
-   Create `data/exp2_actuator_types.csv` with: actuator_type, peak_force, min_force, stroke, peak_power.
+   Create `data/exp2_actuator_types.csv` with one row for each actuator type: actuator_type, peak_force, min_force, stroke, peak_power.
 </Steps>
-
-### Data Collection Table
-
-| Actuator Type | Peak Force (N) | Min Force (N) | Stroke (mm) | Peak Power (W) |
-|--------------|---------------|--------------|------------|----------------|
-| Horizontal Base | | | | |
-| Horizontal Center | | | | |
-| Diagonal | | | | |
 
 ### Python Analysis
 
@@ -265,11 +268,11 @@ sin_t = np.sin(theta_rad)
 cos_t = np.cos(theta_rad)
 tan_t = np.tan(theta_rad)
 
-# Horizontal base (symmetric): F = W / (2 tan θ)
-F_base = W_eff * n / (2 * tan_t)
+# Horizontal base: F = W / tan θ
+F_base = W_eff * n / tan_t
 
-# Horizontal center (symmetric): F = W / tan θ
-F_center = W_eff * n / tan_t
+# Horizontal center: F = 2 W / tan θ
+F_center = 2 * W_eff * n / tan_t
 
 # Diagonal: F = W * n * L * cos θ / |dD/dθ|
 def diag_deriv(L, t):
@@ -294,7 +297,7 @@ axes[0].set_ylabel('Actuator Force (N)')
 axes[0].set_title('Force Comparison by Actuator Type')
 axes[0].legend()
 axes[0].grid(True, alpha=0.3)
-axes[0].set_ylim(0, 3000)
+axes[0].set_ylim(0, 6500)
 
 axes[1].plot(theta, P_base, 'b-', linewidth=2, label='Horizontal Base')
 axes[1].plot(theta, P_center, 'r-', linewidth=2, label='Horizontal Center')
@@ -317,11 +320,11 @@ print(f"\nHorizontal Center requires {max(F_center)/max(F_base):.1f}x the peak f
 
 ### Expected Results
 
-- Horizontal-base has the lowest peak force (about half of horizontal-center) because the actuator spans the full spread
-- Horizontal-center (lead screw) requires twice the force of horizontal-base for the same load, because it only spans half the geometry
-- Diagonal force curve has a different shape: it peaks at a different angle and drops off more gradually
-- All three produce the same height and the same effective work (energy conservation holds)
-- Power curves differ because each actuator moves at different effective speeds relative to the platform
+- Horizontal-base peaks at about 3114 N at 10 degrees and falls to under 100 N at 80 degrees, because the actuator spans the full spread and has the longest stroke (243 mm)
+- Horizontal-center (lead screw) requires twice the force of horizontal-base at every angle (about 6228 N at 10 degrees), because it has half the stroke (122 mm) for the same lift
+- Diagonal force curve has a different shape: it has the lowest peak of the three (about 2525 N at 10 degrees) but drops off far more gradually. It crosses above the horizontal-base curve near 21 degrees and is still near 960 N at 80 degrees
+- All three raise the load through the same height, so all three do the same work. A lower force is always paid for with a longer stroke
+- Power curves differ because the actuator speed is fixed at 50 mm/s: a mounting that needs more force at that speed gives more power and raises the platform faster
 
 ### Design Question
 
@@ -334,10 +337,10 @@ You are designing a lab jack that must be very compact when collapsed. The diago
 <InArticleAd />
 
 
-The simulator offers two joint arrangements: symmetric (both base pivots slide) and left-pinned (one pivot is fixed to the ground). This seemingly small change doubles the actuator force requirement. This experiment shows why, and when each configuration is the better engineering choice.
+The simulator offers two joint arrangements: symmetric (both base pivots slide) and left-pinned (one pivot is fixed to the ground). It is easy to assume that the pinned arrangement makes one actuator do twice the work. It does not. The actuator joins the same two base pivots in both, so the force is the same. What changes is where the scissor sits under the platform. This experiment shows both facts, and when each configuration is the better engineering choice.
 
 :::note[Objective]
-Compare actuator force, pin forces, and stability metrics between symmetric and left-pinned configurations with identical loading. Explain the factor-of-two force difference using moment balance.
+Show that actuator force, height, and stroke are identical for symmetric and left-pinned configurations with identical loading, and explain why using work in equals work out. Then measure how far the scissor center travels sideways in the left-pinned configuration and what that does to the tipping margin.
 :::
 
 <Steps>
@@ -351,23 +354,26 @@ Compare actuator force, pin forces, and stability metrics between symmetric and 
    Change Joint Arrangement to "Left-Pinned." Click "Run Full Experiment." The force curve overlays on the previous one.
 
 4. **Compare force charts**
-   Observe the Actuator Force tab. The left-pinned curve should be exactly 2x the symmetric curve.
+   Open the Actuator Force tab. The two curves lie exactly on top of each other, which means that fixing one pivot does not change the work the actuator must do. The peak force is 5949.5 N at 10 degrees in both configurations.
 
-5. **Compare stability**
-   Check the Stability tab. Note the tipping angle and safety factor differences.
+5. **Watch the scissor center**
+   Play the animation in each configuration. In symmetric, the crossing pin stays on the center line. In left-pinned, it moves toward the fixed pin as the lift rises. Read S on the info bar at 10 degrees and at a higher angle: the center has moved by half of the change in S.
 
-6. **Record data**
-   Save `data/exp3_config_compare.csv` with: theta, F_symmetric, F_left_pinned, tipping_sym, tipping_lp.
+6. **Compare stability**
+   Open the Stability tab. The simulator reports the same tipping angle in both configurations, because it always places the load over the scissor center. A real load stays in the middle of the platform while the center moves away under it. To model that, keep left-pinned, change Load Distribution to "Point Load," and set Load Position to 40 mm (the center travel at 45 degrees is about 42 mm, and 40 mm is the nearest slider step). Run again and read the tipping angle at 45 degrees.
+
+7. **Record data**
+   Save `data/exp3_config_compare.csv` with: theta, F_symmetric, F_left_pinned, center_travel, tipping_centered, tipping_shifted.
 </Steps>
 
 ### Data Collection Table
 
-| θ (deg) | F_symmetric (N) | F_left_pinned (N) | Ratio | Tipping_sym (deg) | Tipping_lp (deg) |
-|---------|-----------------|-------------------|-------|-------------------|------------------|
-| 15 | | | | | |
-| 30 | | | | | |
-| 45 | | | | | |
-| 60 | | | | | |
+| θ (deg) | F_symmetric (N) | F_left_pinned (N) | Ratio | Center travel (mm) | Tipping, load over center (deg) | Tipping, load fixed on platform (deg) |
+|---------|-----------------|-------------------|-------|--------------------|---------------------------------|---------------------------------------|
+| 15 | | | | | | |
+| 30 | | | | | | |
+| 45 | | | | | | |
+| 60 | | | | | | |
 
 ### Python Analysis
 
@@ -377,40 +383,48 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 L = 300; n = 1; P = 1000; m = 5; g = 9.81
+theta_min = 10
 W_eff = P + 2 * n * m * g / 2
 
-theta = np.linspace(10, 70, 200)
+theta = np.linspace(theta_min, 70, 200)
 theta_rad = np.deg2rad(theta)
 tan_t = np.tan(theta_rad)
 cos_t = np.cos(theta_rad)
 sin_t = np.sin(theta_rad)
 
-# Symmetric: F = W_eff / (2 tan θ)
-F_sym = W_eff * n / (2 * tan_t)
-
-# Left-pinned: F = W_eff / tan θ
+# The actuator joins the two base pivots in both configurations.
+# Work in = work out: F * d(L cos θ) = W_eff * d(n L sin θ)
+F_sym = W_eff * n / tan_t
 F_lp = W_eff * n / tan_t
 
-# Stability: tipping angle = atan(halfSpread / cogY)
+# Left-pinned only: the scissor center moves toward the fixed pin
 halfSpread = (L / 2) * cos_t
+travel = (L / 2) * (np.cos(np.deg2rad(theta_min)) - cos_t)
+
+# Stability: tipping angle = atan(margin / cogY)
 height = n * L * sin_t
 total_weight = P + 2 * n * m * g
 link_cog_y = height / 2  # approximate
 cog_y = (P * height + 2*n*m*g * link_cog_y) / total_weight
-tipping = np.degrees(np.arctan(halfSpread / cog_y))
+tip_centered = np.degrees(np.arctan(halfSpread / cog_y))
+
+# Load fixed in the middle of the platform while the center moves away
+cog_x = P * travel / total_weight
+margin = np.maximum(halfSpread - cog_x, 0)
+tip_shifted = np.degrees(np.arctan(margin / cog_y))
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-axes[0].plot(theta, F_sym, 'b-', linewidth=2, label='Symmetric')
-axes[0].plot(theta, F_lp, 'r-', linewidth=2, label='Left-Pinned')
-axes[0].plot(theta, F_lp / F_sym, 'k--', linewidth=1, label='Ratio (right axis)')
+axes[0].plot(theta, F_sym, 'b-', linewidth=3, label='Symmetric')
+axes[0].plot(theta, F_lp, 'r--', linewidth=1.5, label='Left-Pinned')
 axes[0].set_xlabel('θ (degrees)')
 axes[0].set_ylabel('Actuator Force (N)')
 axes[0].set_title('Force: Symmetric vs Left-Pinned')
 axes[0].legend()
 axes[0].grid(True, alpha=0.3)
 
-axes[1].plot(theta, tipping, 'g-', linewidth=2, label='Tipping Angle')
+axes[1].plot(theta, tip_centered, 'g-', linewidth=2, label='Load over scissor center')
+axes[1].plot(theta, tip_shifted, 'm-', linewidth=2, label='Left-pinned, load fixed on platform')
 axes[1].axhline(y=5, color='r', linestyle='--', label='5° design limit')
 axes[1].set_xlabel('θ (degrees)')
 axes[1].set_ylabel('Tipping Angle (degrees)')
@@ -422,20 +436,25 @@ plt.tight_layout()
 plt.savefig('plots/exp3_configurations.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-print(f"Force ratio (left-pinned / symmetric) = {F_lp[50]/F_sym[50]:.2f} (should be 2.00)")
-print(f"Tipping angle at θ=45°: {tipping[np.argmin(np.abs(theta-45))]:.1f}°")
+i45 = np.argmin(np.abs(theta - 45))
+print(f"Force ratio (left-pinned / symmetric) = {F_lp[50]/F_sym[50]:.2f} (should be 1.00)")
+print(f"Peak force at θ={theta_min}°: {F_sym[0]:.1f} N in both configurations")
+print(f"Center travel at θ=45°: {travel[i45]:.1f} mm, at θ=70°: {travel[-1]:.1f} mm")
+print(f"Tipping angle at θ=45°: {tip_centered[i45]:.1f}° centered, {tip_shifted[i45]:.1f}° with the load fixed on the platform")
+print(f"Load reaches the sliding pivot at θ = {theta[np.argmax(margin == 0)]:.0f}°")
 ```
 
 ### Expected Results
 
-- Left-pinned actuator force is exactly 2x the symmetric force at every angle
-- This is because symmetric has two "virtual actuators" sharing the load through geometry, while left-pinned has one actuator doing all the work
-- Stability (tipping angle) is the same for both when the load is centered, because the base footprint is identical
-- Pin forces differ: the fixed pin in left-pinned carries a much larger horizontal reaction
+- Actuator force is identical at every angle (ratio 1.00): about 3915 N at 15 degrees, 1049 N at 45 degrees, and 606 N at 60 degrees in both configurations
+- This is because the actuator joins the same two base pivots in both. The work it does over a small change in spread must equal the work done on the load over the matching change in height, and fixing one pivot to the ground changes neither
+- Height, stroke (192.8 mm), mechanical advantage, power, and energy are also identical
+- The position is what differs: in left-pinned the scissor center travels about 42 mm toward the fixed pin by 45 degrees and 96 mm by 70 degrees (half of the 192.8 mm spread range). In symmetric it does not move
+- A load that stays in the middle of the platform therefore ends up off center over the supports in left-pinned. At 45 degrees the tipping angle falls from 27.6 degrees to about 19 degrees, and near 62 degrees the load reaches the sliding pivot, so the fixed pin must hold the platform down
 
 ### Design Question
 
-A car jack must be operated by hand with a screw mechanism. Would you choose symmetric or left-pinned? Consider that the hand force is limited, but the jack needs to be stable on uneven ground. What about a warehouse lift that uses a hydraulic pump?
+A car jack must be operated by hand with a screw mechanism. The hand force is the same for symmetric and left-pinned, so the choice depends on other things. Which configuration keeps the load over the middle of the supports as the jack rises, and which is easier to anchor on uneven ground? What about a warehouse lift that uses a hydraulic pump and carries pallets placed in the middle of the platform?
 
 ---
 
@@ -444,7 +463,7 @@ A car jack must be operated by hand with a screw mechanism. Would you choose sym
 <InArticleAd />
 
 
-Adding stages to a scissor lift multiplies the height but also multiplies the actuator force and degrades stability. This experiment quantifies all three effects and reveals why most practical scissor lifts use 1 to 3 stages.
+When a lift must reach higher, the cheap answer is to stack another stage on top. Each stage adds one full link height, but the actuator force grows at least as fast, and the lift becomes easier to tip. This experiment measures all three effects and shows why most practical scissor lifts use 1 to 3 stages.
 
 :::note[Objective]
 Compare the height, actuator force, and stability of 1-stage, 2-stage, and 3-stage scissor lifts with the same link length. Verify that height scales as n but force also scales as n.
@@ -461,22 +480,14 @@ Compare the height, actuator force, and stability of 1-stage, 2-stage, and 3-sta
    Change Number of Stages to 2. Click "Run Full Experiment." The overlay shows both.
 
 4. **Record 2-stage results**
-   Note the new max height (should be 2x), peak force (should be roughly 2x), and min tipping angle (should be lower).
+   Note the new max height (should be 2x), peak force (a little more than 2x, because the second stage adds link weight), and min tipping angle (should be lower).
 
 5. **Clear and test 3 stages**
    Clear Experiment A, save 2-stage as new A, switch to 3 stages, run again.
 
 6. **Collect all data**
-   Save `data/exp4_stages.csv` with: stages, max_height, peak_force, min_tipping_angle, actuator_stroke.
+   Save `data/exp4_stages.csv` with one row for each stage count: stages, max_height, peak_force, min_tipping_angle, actuator_stroke.
 </Steps>
-
-### Data Collection Table
-
-| Stages | Max Height (mm) | Peak Force (N) | Min Tipping Angle (deg) | Actuator Stroke (mm) |
-|--------|----------------|---------------|------------------------|---------------------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
 
 ### Python Analysis
 
@@ -496,7 +507,7 @@ colors = ['#2A9D8F', '#E9C46A', '#ef4444']
 for n in [1, 2, 3]:
     W_eff = P + 2 * n * m * g / 2
     height = n * L * np.sin(theta_rad)
-    force = W_eff * n / (2 * np.tan(theta_rad))
+    force = W_eff * n / np.tan(theta_rad)
 
     # Stability
     halfSpread = (L / 2) * np.cos(theta_rad)
@@ -510,7 +521,7 @@ for n in [1, 2, 3]:
 
 axes[0].set_title('Height vs Angle'); axes[0].set_ylabel('Height (mm)')
 axes[1].set_title('Actuator Force vs Angle'); axes[1].set_ylabel('Force (N)')
-axes[1].set_ylim(0, 5000)
+axes[1].set_ylim(0, 12000)
 axes[2].set_title('Tipping Angle vs Angle'); axes[2].set_ylabel('Tipping Angle (deg)')
 axes[2].axhline(y=5, color='k', linestyle='--', alpha=0.5, label='5° limit')
 
@@ -526,21 +537,21 @@ plt.show()
 for n in [1, 2, 3]:
     W_eff = P + 2 * n * m * g / 2
     h_max = n * L * np.sin(np.deg2rad(70))
-    F_peak = W_eff * n / (2 * np.tan(np.deg2rad(10)))
+    F_peak = W_eff * n / np.tan(np.deg2rad(10))
     print(f"{n}-stage: max height = {h_max:.0f} mm, peak force = {F_peak:.0f} N")
 ```
 
 ### Expected Results
 
-- Height scales linearly: 2-stage gives exactly 2x the height, 3-stage gives 3x
-- Force scales more than linearly because each added stage adds its own link weight to the effective load
-- Stability (tipping angle) degrades significantly with stages: the CoG rises faster than the base width changes
+- Height grows in step with the stages: 2-stage gives exactly 2x the height, 3-stage gives 3x
+- Force grows a little faster than the stage count, because each added stage adds its own link weight to the effective load: the peak at 10 degrees is about 3110 N, 6780 N, and 11000 N
+- Stability (tipping angle) falls with every stage: the CoG rises, but the base does not get wider
 - Actuator stroke is the same for all stages (it depends on angle range and link length, not stage count)
-- A 3-stage lift at 70 degrees gives about 845 mm height but with a tipping angle that may be dangerously low
+- A 3-stage lift at 70 degrees reaches about 846 mm, but its tipping angle is only about 4.3 degrees, below the 5-degree limit
 
 ### Design Question
 
-An aerial work platform needs to reach 3.6 meters. You have two options: (A) 3 stages with L = 1200 mm, or (B) 2 stages with L = 1800 mm. Both give the same max height. Which has better stability? Which requires less actuator force? Which is easier to transport (collapsed height)?
+An aerial work platform needs to reach 3.6 meters. You have two options: (A) 3 stages with $L = 1200\ \text{mm}$, or (B) 2 stages with $L = 1800\ \text{mm}$. Both give the same max height. Which has better stability? Which requires less actuator force? Which is easier to transport (collapsed height)?
 
 ---
 
@@ -549,10 +560,10 @@ An aerial work platform needs to reach 3.6 meters. You have two options: (A) 3 s
 <InArticleAd />
 
 
-The simulator supports two load types: UDL (uniform distributed load, the default) and point load at a configurable position. For a symmetric configuration with centered loading, the forces are mathematically identical. But the story changes when the load shifts off-center or when you examine stability. This experiment reveals the differences.
+A pallet is rarely set down in the exact middle of a platform, and a person on it walks to the edge. The simulator has two kinds of load: UDL (spread evenly, the default) and a point load at a position you choose. With the load in the center, the two give the same forces. This experiment shows what changes when the point load moves off center.
 
 :::note[Objective]
-Verify that centered UDL and centered point load produce identical actuator forces. Then explore how offset point loads affect pin forces and stability, while UDL remains stable.
+Verify that centered UDL and centered point load produce identical actuator forces. Then measure how an offset point load changes the pin forces and the tipping angle.
 :::
 
 <Steps>
@@ -566,13 +577,13 @@ Verify that centered UDL and centered point load produce identical actuator forc
    Change Load Distribution to "Point Load," offset = 0. Run again. The force curves should overlay perfectly.
 
 4. **Verify identity**
-   Check the Actuator Force tab: the two curves should be indistinguishable. This proves that centered point load equals UDL for symmetric configs.
+   Check the Actuator Force tab: the two curves should be indistinguishable. This shows that a centered point load acts like a UDL in the symmetric configuration.
 
 5. **Add offset**
-   Set Load Position to +100 mm. Run again. Check the Joint Pin Forces tab for left/right asymmetry.
+   Set Load Position to +100 mm. Run again. In the Joint Pin Forces tab, the Left Side and Right Side curves now separate: the side nearer the load carries more. Use these readings to compare left with right, not to size a pin.
 
 6. **Check stability impact**
-   Open the Stability tab. Compare the tipping angle and safety factor with UDL vs offset point load.
+   Open the Stability tab. Read the tipping angle and safety factor for UDL and for the offset point load. Both fall as the load moves toward one side.
 
 7. **Record data**
    Save `data/exp5_load_types.csv` with: load_type, offset, peak_force, left_pin, right_pin, min_tipping.
@@ -644,10 +655,10 @@ plt.show()
 ### Expected Results
 
 - Centered UDL and centered point load produce identical actuator force curves (the overlay is perfect)
-- Offset point loads create asymmetric pin forces: the side closer to the load carries more
-- Stability degrades with offset: tipping angle drops significantly at e = 100 mm compared to centered loading
-- The actuator force (total) remains approximately the same regardless of offset for symmetric config, because the total vertical load hasn't changed
-- The key engineering insight: UDL is inherently more stable than an equivalent point load at any offset
+- Offset point loads make the pin forces unequal: the side closer to the load carries more
+- Stability falls with offset: at 45 degrees the tipping angle is 27.6 degrees with the load centered, about 17 degrees at $e = 50\ \text{mm}$, and about 4 degrees at $e = 100\ \text{mm}$
+- The total actuator force stays approximately the same at any offset in the symmetric configuration, because the total vertical load has not changed
+- A load that is spread evenly keeps its center in the middle of the platform. A point load can sit anywhere, and every millimeter off center takes away tipping margin
 
 ### Design Question
 
@@ -660,10 +671,10 @@ A loading dock leveler must handle both centered pallet loads (UDL-like) and a f
 <InArticleAd />
 
 
-Every scissor lift has a maximum allowable load eccentricity. Exceed it and the lift tips over. This experiment systematically increases the point load offset until the safety factor drops below acceptable limits, mapping the safe operating envelope.
+A worker who leans over the rail, or a pallet set down at one edge, puts the load off center (an eccentric load). Past a certain offset the lift falls over. This experiment increases the offset of a point load step by step and maps the offsets that are safe at each height.
 
 :::note[Objective]
-Determine the maximum safe load offset for a given configuration by sweeping the offset parameter and recording tipping angle and safety factor at different heights. Establish a safe operating envelope.
+Find the largest safe load offset for a given configuration: sweep the offset, record the tipping angle and safety factor at different heights, and mark the safe region.
 :::
 
 <Steps>
@@ -674,26 +685,14 @@ Determine the maximum safe load offset for a given configuration by sweeping the
    Set θ = 45 degrees. Record tipping angle and safety factor for offsets: 0, 25, 50, 75, 100, 125, 150 mm.
 
 3. **Find critical offset**
-   The critical offset is where the safety factor drops below 2.0 (a common engineering minimum). Note this value.
+   The critical offset is where the safety factor drops below 2.0, which in the simulator means a tipping angle below 10 degrees. Note this value.
 
 4. **Repeat at high angle**
-   Set θ = 60 degrees (higher platform). Repeat the sweep. The critical offset should be smaller because the CoG is higher.
+   Set θ = 60 degrees (higher platform). Repeat the sweep. The critical offset should be smaller, because the CoG is higher and the supports are closer together.
 
 5. **Build the envelope**
-   Create `data/exp6_tipping.csv` with: theta, offset, tipping_angle, safety_factor.
+   Create `data/exp6_tipping.csv` with one row for each angle and offset: theta, offset, tipping_angle, safety_factor.
 </Steps>
-
-### Data Collection Table
-
-| θ (deg) | Offset (mm) | Tipping Angle (deg) | Safety Factor |
-|---------|-------------|--------------------|--------------|
-| 45 | 0 | | |
-| 45 | 50 | | |
-| 45 | 100 | | |
-| 45 | 150 | | |
-| 60 | 0 | | |
-| 60 | 50 | | |
-| 60 | 100 | | |
 
 ### Python Analysis
 
@@ -758,11 +757,10 @@ for theta_deg in thetas:
 
 ### Expected Results
 
-- At low angles (θ = 30), the lift is very stable and tolerates large offsets before the safety factor drops
-- At high angles (θ = 60), even small offsets significantly reduce the safety factor because the CoG is high and the base is narrow
-- The tipping angle decreases linearly with offset for small offsets, then drops faster as the CoG approaches the support edge
-- The safe operating envelope is roughly triangular: more offset is acceptable at low heights, less at high heights
-- A 2000 N load at θ = 60 with L = 400 mm becomes dangerously unstable beyond about 80 mm offset
+- At low angles ($\theta = 30^\circ$), the lift is very stable and tolerates large offsets before the safety factor drops
+- At high angles ($\theta = 60^\circ$), even small offsets reduce the safety factor a lot, because the CoG is high and the base is narrow
+- The safe region (the safe operating envelope) is roughly a triangle: more offset is acceptable at low heights, less at high heights
+- A 2000 N load at $\theta = 60^\circ$ with $L = 400\ \text{mm}$ falls below a safety factor of 2.0 (tipping angle under 10 degrees) at about 45 mm offset, and below the 5-degree critical line at about 75 mm offset
 
 ### Design Question
 
@@ -775,10 +773,10 @@ An aerial work platform must be rated for workers moving around on the platform 
 <InArticleAd />
 
 
-Sizing the hydraulic pump or electric motor for a scissor lift requires knowing the peak power, total energy, and how power varies across the operating range. This experiment maps the complete energy and power profile and connects it to real actuator selection.
+A pump or motor that is too small stalls at the bottom of the travel. One that is too large wastes money, space, and electricity. To size it you need the peak power, the total energy, and how the power changes with the angle. This experiment maps all three and connects them to the choice of a real hydraulic unit.
 
 :::note[Objective]
-Calculate the total energy required to raise a loaded platform from minimum to maximum height. Determine the peak power requirement and at what angle it occurs. Verify energy conservation between work done and potential energy gained.
+Calculate the total energy required to raise a loaded platform from minimum to maximum height. Find the peak power and the angle where it occurs. Check that the work done by the actuator equals the potential energy (the energy of height) that the load gains.
 :::
 
 <Steps>
@@ -795,7 +793,7 @@ Calculate the total energy required to raise a loaded platform from minimum to m
    Note the maximum power from the Power chart. At what angle does it occur?
 
 5. **Calculate hydraulic requirements**
-   Using peak power and actuator force at that angle, calculate the required hydraulic flow rate: Q = P_power / (F * pressure_efficiency).
+   Using the peak power and the actuator force at that angle, choose a cylinder bore area $A$. The working pressure is then $p = F / A$ and the required hydraulic flow rate is $Q = P_{\text{power}} / p$, which is the same as $Q = A\,v_{\text{act}}$. Divide by the pump efficiency to get the flow the pump must supply.
 
 6. **Record data**
    Save `data/exp7_energy.csv` with: theta, PE, work_done, power, force.
@@ -825,7 +823,7 @@ PE_links = total_link_weight * delta_h / 2000
 PE_total = PE_platform + PE_links
 
 # Actuator force
-force = W_eff * n / (2 * np.tan(theta_rad))
+force = W_eff * n / np.tan(theta_rad)
 
 # Power = F * v_actuator (W)
 power = np.abs(force) * v_act / 1000
@@ -869,13 +867,13 @@ print(f"Energy conservation: work/PE = {work[-1]/PE_total[-1]:.4f}")
 
 - PE and cumulative work curves overlay closely (ratio should be 1.0, verifying energy conservation)
 - Peak power occurs at the lowest angle (around 10 degrees) where force is highest and actuator speed translates to the fastest platform rise
-- Total energy is typically a few hundred joules for a medium-sized lift
+- Total energy for this lift is about 1190 J (an effective load of about 3100 N raised 383 mm)
 - The power curve has the same shape as the force curve (since actuator speed is constant)
-- A 3000 N load on a 500 mm link from 10 to 70 degrees requires roughly 40 to 80 W peak power
+- A 3000 N load on a 500 mm link from 10 to 70 degrees requires about 527 W peak power (17570 N at 30 mm/s)
 
 ### Design Question
 
-You need to select a hydraulic power unit for a loading dock leveler (P = 8000 N, L = 400 mm, range 5 to 45 degrees). Calculate the peak power requirement. If the hydraulic system is 70% efficient, what motor power rating would you specify? Would a 0.5 HP motor be sufficient?
+You need to select a hydraulic power unit for a loading dock leveler ($P = 8000\ \text{N}$, $L = 400\ \text{mm}$, range 5 to 45 degrees). Calculate the peak power requirement. If the hydraulic system is 70% efficient, what motor power rating would you specify? Would a 0.5 HP motor be sufficient?
 
 ---
 
@@ -884,10 +882,10 @@ You need to select a hydraulic power unit for a loading dock leveler (P = 8000 N
 <InArticleAd />
 
 
-The scissor arms are not just kinematic elements; they are structural beams under combined bending and axial loads. This experiment examines how bending stress varies with angle and load, helping determine the minimum cross-section dimensions for a given application.
+An arm that bends and stays bent ends the life of the lift, and an arm that is far heavier than needed adds load for the actuator. Each arm is a beam that is bent and pushed along its length at the same time. This experiment reads the bending stress at several loads and compares it with the strength of common materials, which gives the smallest cross-section you can use.
 
 :::note[Objective]
-Plot the link bending stress across the operating range for different loads. Determine the angle at which stress is maximum and compare it to the yield strength of common engineering materials.
+Plot the link bending stress across the operating range for different loads. Find where the stress is greatest and compare it with the yield strength of common engineering materials (the stress at which a part bends permanently).
 :::
 
 <Steps>
@@ -904,20 +902,11 @@ Plot the link bending stress across the operating range for different loads. Det
    Clear, save 2000 N as A, set P = 5000 N. Run to compare.
 
 5. **Compare with material limits**
-   Mild steel yields at about 250 MPa, aluminum at about 270 MPa. Is the stress safely below these limits?
+   Mild steel yields at about 250 MPa, and 6061 aluminum at about 270 MPa. Divide the yield strength by your stress to get the safety factor. Is it at least 2?
 
 6. **Record data**
-   Save `data/exp8_stress.csv` with: load, max_stress, angle_at_max_stress.
+   Save `data/exp8_stress.csv` with one row for each load: load, max_stress, angle_at_max_stress.
 </Steps>
-
-### Data Collection Table
-
-| Load P (N) | Max Stress (MPa) | Safety Factor (Steel, 250 MPa) |
-|-----------|-----------------|-------------------------------|
-| 500 | | |
-| 1000 | | |
-| 2000 | | |
-| 5000 | | |
 
 ### Python Analysis
 
@@ -945,7 +934,7 @@ for idx, P in enumerate(loads):
     W_eff = P + 2 * n * m * g / 2
     F_arm = W_eff / (2 * n)    # load per arm
     M = F_arm * L / 4           # bending moment at quarter span
-    stress = M * c / I / 1e6    # convert Pa to MPa (constant with angle in this model)
+    stress = M * c / I          # N/mm^2 is already MPa (constant with angle in this model)
 
     ax.axhline(y=stress, color=colors[idx], linewidth=2, label=f'P = {P} N ({stress:.1f} MPa)')
 
@@ -968,7 +957,7 @@ for P in loads:
     W_eff = P + 2 * n * m * g / 2
     F_arm = W_eff / (2 * n)
     M = F_arm * L / 4
-    stress = M * c / I / 1e6
+    stress = M * c / I
     sf = 250 / stress
     print(f"P = {P} N: stress = {stress:.1f} MPa, safety factor (steel) = {sf:.1f}")
 ```
@@ -978,12 +967,12 @@ for P in loads:
 - Bending stress is approximately constant across the angle range (the simplified model treats it as a statically loaded beam)
 - Stress scales linearly with load: doubling the platform load roughly doubles the stress
 - For the default 300 mm link with 15 x 30 mm cross-section, a 500 N load gives about 9 MPa (very safe)
-- A 5000 N load pushes the stress higher, but still below steel yield for this geometry
-- The safety factor against yield decreases linearly with load
+- A 5000 N load gives about 84 MPa, a safety factor of about 3 against steel yield for this geometry
+- The safety factor against yield falls in proportion as the load rises
 
 ### Design Question
 
-Your scissor lift must carry 10,000 N. The current link cross-section (L/20 x L/10) gives a stress of about 90 MPa. You need a safety factor of at least 3.0 against yield for a mild steel link. What minimum cross-section dimensions would you specify? Would you change the height, width, or both?
+Your scissor lift must carry 10,000 N. The current link cross-section ($L/20 \times L/10$) gives a stress of about 167 MPa. You need a safety factor of at least 3.0 against yield for a mild steel link. What minimum cross-section dimensions would you specify? Would you change the height, width, or both?
 
 ---
 
@@ -992,10 +981,10 @@ Your scissor lift must carry 10,000 N. The current link cross-section (L/20 x L/
 <InArticleAd />
 
 
-The simulator includes eight presets modeled after real scissor lift applications: warehouse lifts, car jacks, aerial platforms, lab jacks, loading docks, automotive hoists, electric tables, and work tables. Each represents different engineering tradeoffs. This experiment compares them all.
+Before you design a lift, look at how existing ones answer the same questions. The simulator includes eight presets modeled after real scissor lifts: warehouse lifts, car jacks, aerial platforms, lab jacks, loading docks, automotive hoists, electric tables, and work tables. Each one trades height, force, stability, and folded size in a different way.
 
 :::note[Objective]
-Run all eight presets and compare their force, power, height, stability, and efficiency characteristics. Identify what design choices define each application category and what engineering tradeoffs they represent.
+Run all eight presets and compare their force, power, height, and stability. Identify the design choices that each kind of job forces on the designer.
 :::
 
 <Steps>
@@ -1003,7 +992,7 @@ Run all eight presets and compare their force, power, height, stability, and eff
    Select each preset from the dropdown and click "Run Full Experiment." For each, record: max height, peak force, peak power, min tipping angle, actuator type, and configuration.
 
 2. **Use A/B comparison**
-   Save "Warehouse Lift" as Experiment A. Then run "Lab Jack" to see the dramatic difference in scale on the same charts.
+   Save "Warehouse Lift" as Experiment A. Then run "Lab Jack" to see the difference in scale on the same charts.
 
 3. **Group by actuator type**
    Note which presets use horizontal-base, horizontal-center (lead screw), and diagonal actuators. How do the force curves differ?
@@ -1012,21 +1001,8 @@ Run all eight presets and compare their force, power, height, stability, and eff
    Which use symmetric vs left-pinned? How does this correlate with the application?
 
 5. **Record all data**
-   Create `data/exp9_presets.csv` with all preset names and their key metrics.
+   Create `data/exp9_presets.csv` with one row for each preset: preset, config, actuator, stages, max_height, peak_force, peak_power, min_tipping.
 </Steps>
-
-### Data Collection Table
-
-| Preset | Config | Actuator | Stages | Max Height (mm) | Peak Force (N) | Peak Power (W) | Min Tipping (deg) |
-|--------|--------|----------|--------|-----------------|---------------|----------------|-------------------|
-| Warehouse Lift | | | | | | | |
-| Car Jack | | | | | | | |
-| Aerial Platform | | | | | | | |
-| Lab Jack | | | | | | | |
-| Loading Dock | | | | | | | |
-| Auto Hoist | | | | | | | |
-| Electric Table | | | | | | | |
-| Work Table | | | | | | | |
 
 ### Python Analysis
 
@@ -1054,19 +1030,16 @@ for name, p in presets.items():
     max_h = p['n'] * p['L'] * np.sin(np.deg2rad(p['max_t']))
     min_h = p['n'] * p['L'] * np.sin(np.deg2rad(p['min_t']))
 
-    # Peak force at minimum angle
+    # Peak force at minimum angle (the same for symmetric and left-pinned)
+    t = np.deg2rad(p['min_t'])
     if p['act'] == 'h-base':
-        if p['config'] == 'sym':
-            peak_F = W_eff * p['n'] / (2 * np.tan(np.deg2rad(p['min_t'])))
-        else:
-            peak_F = W_eff * p['n'] / np.tan(np.deg2rad(p['min_t']))
+        peak_F = W_eff * p['n'] / np.tan(t)
     elif p['act'] == 'h-center':
-        if p['config'] == 'sym':
-            peak_F = W_eff * p['n'] / np.tan(np.deg2rad(p['min_t']))
-        else:
-            peak_F = W_eff * p['n'] * 2 / np.tan(np.deg2rad(p['min_t']))
+        peak_F = 2 * W_eff * p['n'] / np.tan(t)
     else:
-        peak_F = W_eff * p['n'] * 3  # rough estimate for diagonal
+        f = 0.09 * np.cos(t)**2 + 0.49 * np.sin(t)**2
+        dDdT = p['L'] * 0.40 * np.sin(2*t) / (2 * np.sqrt(f))
+        peak_F = W_eff * p['n'] * p['L'] * np.cos(t) / dDdT
 
     results.append((name, max_h, peak_F, p['config'], p['act'], p['n']))
     print(f"{name:20s}: max h = {max_h:7.0f} mm, peak F = {peak_F:8.0f} N, {p['config']:5s}/{p['act']}")
@@ -1097,9 +1070,9 @@ plt.show()
 
 ### Expected Results
 
-- Aerial Platform has the largest max height (over 3300 mm with 3 stages and L = 1200 mm)
-- Loading Dock has the highest peak actuator force (over 40,000 N at its 5-degree minimum angle)
-- Lab Jack has the smallest forces (under 200 N) and the most compact dimensions
+- Aerial Platform has the largest max height (over 3300 mm with 3 stages and $L = 1200\ \text{mm}$)
+- Loading Dock has the highest peak actuator force of the horizontal-base presets (about $93{,}700\ \text{N}$ at its 5-degree minimum angle); the Auto Hoist diagonal actuator is higher still (about $96{,}500\ \text{N}$)
+- Lab Jack has the smallest forces (about 410 N) and the most compact dimensions
 - Car Jack uses left-pinned because it needs a fixed base point for stability on uneven ground
 - Lead screw actuators (Lab Jack, Electric Table) are self-locking: they hold position without hydraulic pressure
 - Diagonal actuators (Auto Hoist, Work Table) offer a compact folded profile but complex force curves

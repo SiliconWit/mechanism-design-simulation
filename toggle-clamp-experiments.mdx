@@ -25,39 +25,57 @@ import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/sta
 
 import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
-A toggle clamp holds a workpiece with a force many times larger than the hand effort that sets it, and then holds it with no effort at all. Both facts come from one idea: driving a linkage just past a dead-centre position. These six experiments make that idea concrete. You will find top-dead-centre, watch the force amplification rise and fall, keep the transmission angle healthy, size the pins and links so they survive the load, and finally pick a clamp for a real job. #ToggleClamp #MechanismDesign #ForceAnalysis
+A clamp that springs open during a cut ruins the part and can injure the operator. A clamp that needs two hands to close slows every cycle. A toggle clamp avoids both: it presses the work with more force than the hand gives, and then it stays closed with no hand on it. Both effects come from one idea: a linkage that is pushed just past the position where two of its links form a straight line. In these six experiments you find that position on a simulator, measure how the force rises and falls near it, check how well the linkage pushes, size the pins and links, and choose a clamp for a real job. #ToggleClamp #MechanismDesign #ForceAnalysis
 
 :::tip[What you need]
 The [Toggle Clamp Mechanism Simulator](/product-development/toggle-clamp-mechanism-simulator/), and Python 3 with NumPy and Matplotlib for the analysis scripts (`pip install numpy matplotlib`).
 :::
 
 :::note[Related resources]
-Build the clamp parametrically in the [FreeCAD Toggle Clamp lesson](/education/parametric-mechanical-cad-freecad/toggle-clamp-mechanism), and see the full tool set on the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+Build the clamp parametrically in the [FreeCAD Toggle Clamp lesson](/education/parametric-mechanical-cad-freecad/toggle-clamp-mechanism/), and see the full tool set on the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+:::
+
+## How a toggle clamp works
+
+A toggle clamp presses a pad onto a workpiece through two links that a handle pushes into a straight line, like a knee: a bent knee needs a strong muscle to carry you, and a straight knee needs almost none. Locking pliers, a toolbox latch, and the clamps that hold a mould closed work the same way.
+
+```text
+     open               dead centre            locked
+
+       A
+      / \                                 O-----.     .-----B
+     /   \           O------A------B             '-A-'
+    O     B                                        ^
+                                                   |
+  links bent:        links in line:        A is past the line
+  small force        greatest force        and rests on a stop
+```
+
+When the handle link (O to A) and the main link (A to B) are almost in line, a large movement of the handle moves the end B only a little. Work in equals work out, so that small movement comes with a large force: the force multiplication is greatest just before the links form a straight line. That position is dead centre, which the simulator calls top-dead-centre (TDC).
+
+At TDC the clamp is not yet locked, because a small shake can bend the links back. So the handle goes a few degrees further, to a stop. Now the push of the workpiece presses the handle into the stop, and the clamp holds with no hand on it.
+
+For a perfect toggle of two equal links, the mechanical advantage (MA, output force divided by input force) is one divided by twice the tangent of the toggle angle $\alpha$, the angle of each link from the straight line:
+
+$$
+\text{MA} = \frac{1}{2\tan\alpha}
+$$
+
+That is a limit. A real clamp has pin friction and unequal links, so the simulator shows less: at 5 degrees past centre the formula gives 5.7, and the simulator's medium-duty clamp gives about 1.5.
+
+:::caution[Simulator only]
+A closed clamp holds stored force, and a handle released near centre can fly back. Find the limits on the simulator, never by loading a real clamp until something gives.
 :::
 
 ## Reference
 
 | Term | Meaning |
 |------|---------|
-| **TDC** | Top-dead-centre: the handle position where the handle and main link line up (collinear) and the mechanical advantage diverges |
-| **Lock margin** | Degrees the handle rests past TDC against a stop, which makes the clamp self-locking |
-| **alpha (toggle angle)** | Angle of the main link away from the collinear TDC position; small alpha means near TDC |
-| **MA** | Mechanical advantage, the ratio of pad clamping force to handle force, F_pad / F_handle |
-| **mu (transmission angle)** | Angle at the toggle joint between the main link and the clamp arm; below about 40 degrees the linkage transmits force poorly |
-| **phi (friction angle)** | arctan of the pin friction coefficient; it shifts the effective toggle angle and caps the achievable MA |
-| **Sy, N** | Material yield strength and design safety factor; allowable stress = Sy / N |
-
-### Experiment Workflow
-
-```mermaid
-flowchart TD
-    A[Predict] --> B[Configure Simulator]
-    B --> C[Run Experiment]
-    C --> D[Read Charts and Panels]
-    D --> E[Record in CSV]
-    E --> F[Run Python Script]
-    F --> G[Compare and Analyze]
-```
+| **Lock margin** | Degrees the handle rests past TDC against a stop |
+| **$\alpha$ (toggle angle)** | Angle of the handle link from the line of the main link; zero at TDC. In the real clamp it is larger than the lock margin |
+| **$\mu$ (transmission angle)** | Angle between the main link and the clamp arm where they join; below about 40 degrees the link mostly presses on the pin |
+| **$\phi$ (friction angle)** | $\arctan$ of the pin friction coefficient $f$; friction acts like an angle added to $\alpha$ |
+| **$S_y$, $N$** | Yield strength (the stress at which a part bends permanently) and safety factor; allowable stress $= S_y / N$ |
 
 ### Workspace Setup
 
@@ -79,10 +97,10 @@ A toggle clamp holds by going over-centre, but its grip fades as the pads and pi
 <InArticleAd />
 
 
-Everyone who has used a toggle clamp has felt the handle "snap" over a hard point and then sit there, holding, on its own. That hard point is top-dead-centre, where the handle and main link are collinear. This experiment locates TDC and shows why resting a few degrees past it makes the clamp lock itself.
+Close a toggle clamp and the handle passes a hard point, then stays down by itself. That point is TDC. If the stop is set before it, the clamp opens when the hand leaves. This experiment finds TDC and shows why the handle must rest a few degrees past it.
 
 :::note[Objective]
-Find the top-dead-centre handle angle for the medium-duty preset, observe the mechanical-advantage spike at TDC, and explain why a small lock margin past TDC produces a self-holding clamp.
+Find the top-dead-centre handle angle for the medium-duty preset, see how the mechanical advantage rises toward TDC, and explain why a small lock margin past TDC makes the clamp hold by itself.
 :::
 
 <Steps>
@@ -90,10 +108,10 @@ Find the top-dead-centre handle angle for the medium-duty preset, observe the me
    Open the simulator and select the Medium-duty vertical preset. Note the info bar shows the TDC handle angle. Keep "Show parameter cues" on so you can see the TDC reference line on the diagram.
 
 2. **Predict**
-   At TDC the handle and main link are collinear, so the ideal toggle relation MA = 1 / (2 tan(alpha)) diverges as the toggle angle alpha goes to zero. Predict that the mechanical-advantage chart spikes as the handle approaches TDC.
+   The ideal relation $\text{MA} = \dfrac{1}{2\tan\alpha}$ grows without limit as $\alpha$ goes to zero. Predict that the simulator's chart rises toward TDC in the same way but stays finite.
 
 3. **Sweep the handle**
-   Drag the handle-angle slider slowly from open toward the locked stop. Watch the MA value in the info bar and the teal current-angle line cross the red TDC line on the charts.
+   Drag the handle-angle slider slowly from open toward the locked stop. The MA in the info bar should rise as the teal current-angle line meets the red TDC line on the charts, and fall after it has crossed.
 
 4. **Record values near TDC**
    Using the lock-margin slider, set the lock margin to 2, 4, 6, 8, 10, and 12 degrees. At each setting read the engineering MA and the clamping force at lock from the panel.
@@ -101,17 +119,6 @@ Find the top-dead-centre handle angle for the medium-duty preset, observe the me
 5. **Save data**
    Create `data/exp1_tdc.csv` with columns: lock_margin_deg, MA_sim, Fpad_sim.
 </Steps>
-
-### Data Collection Table
-
-| Lock margin (deg) | MA_sim | F_pad,sim (N) |
-|-------------------|--------|---------------|
-| 2 | | |
-| 4 | | |
-| 6 | | |
-| 8 | | |
-| 10 | | |
-| 12 | | |
 
 ### Python Analysis
 
@@ -129,6 +136,7 @@ alpha = np.deg2rad(alpha_deg)
 MA_ideal = 1.0 / (2.0 * np.tan(alpha))
 
 # Load simulator readings if present (lock margin ~ toggle angle alpha)
+# The ideal curve is the limit for a perfect toggle: expect the simulator points well below it.
 csv_path = 'data/exp1_tdc.csv'
 sim = np.genfromtxt(csv_path, delimiter=',', skip_header=1) if os.path.exists(csv_path) else None
 
@@ -157,10 +165,11 @@ print("so resting a few degrees PAST TDC against a stop makes the clamp self-loc
 
 ### Expected Results
 
-- The ideal mechanical advantage rises sharply as the toggle angle approaches zero (TDC), in theory without bound
-- The simulator's engineering MA follows the same shape but stays finite, because pin friction and efficiency cap it
-- At a 5-degree lock margin the ideal relation predicts MA near 5.7; the simulator reports a lower value once friction and the handle lever are included
-- Just past TDC the geometry resists being pushed back open, which is the self-locking behaviour
+- The ideal MA rises without limit as the toggle angle approaches zero
+- The simulator's engineering MA has the same shape but peaks at about 5.5 at TDC, because pin friction and efficiency limit it
+- At lock margins of 2, 4, 6, 8, 10, and 12 degrees the simulator gives about 3.05, 1.84, 1.28, 0.95, 0.74, and 0.60. At 5 degrees it gives 1.5 (182 N from 120 N at the handle), where the ideal relation gives 5.7
+- Past about 8 degrees the pad presses with less force than the hand gives
+- Past TDC the push of the workpiece turns the handle toward the stop, so the clamp locks itself
 
 ### Design Question
 
@@ -173,10 +182,10 @@ If you wanted the clamp to hold more securely with no extra hand effort, would y
 <InArticleAd />
 
 
-The ideal toggle relation promises infinite force at TDC, but no real clamp delivers that. Pin friction and mechanism efficiency both eat into the amplification, and friction in particular sets a hard ceiling on how much force you actually get. This experiment compares the ideal, friction, and engineering models.
+The ideal relation promises unlimited force at TDC. Friction in the pins takes much of it, and dry or worn pins take more, so a clamp sized from the ideal relation disappoints. This experiment compares the ideal relation, a friction model, and the simulator.
 
 :::note[Objective]
-Compare the ideal toggle MA with a friction-adjusted model and the simulator's engineering model, and quantify how pin friction and efficiency reduce the delivered clamping force.
+Compare the ideal toggle MA with a friction model and the simulator's engineering model, and measure how much pin friction and efficiency reduce the clamping force.
 :::
 
 <Steps>
@@ -184,7 +193,7 @@ Compare the ideal toggle MA with a friction-adjusted model and the simulator's e
    Select the Medium-duty preset. Note the handle force, pin friction, and efficiency in the Forces and material panel.
 
 2. **Predict**
-   With a friction angle phi = arctan(mu), the friction model MA = 1 / (2 tan(alpha + phi)) no longer diverges at TDC. Predict that increasing pin friction lowers the peak MA.
+   Friction acts like an extra angle, the friction angle $\phi = \arctan f$ for a pin friction coefficient $f$, so the friction model $\text{MA} = \dfrac{1}{2\tan(\alpha + \phi)}$ stays finite at TDC. It still describes a perfect two-link toggle. Predict whether friction changes it more or less than it changes the simulator's real linkage.
 
 3. **Vary friction**
    Set pin friction to 0.05, 0.10, 0.15, and 0.20. At each value, read the engineering MA and clamping force at the locked position.
@@ -195,15 +204,6 @@ Compare the ideal toggle MA with a friction-adjusted model and the simulator's e
 5. **Save data**
    Create `data/exp2_friction.csv` with columns: pin_friction, MA_sim, Fpad_sim.
 </Steps>
-
-### Data Collection Table
-
-| Pin friction mu | MA_sim | F_pad,sim (N) |
-|-----------------|--------|---------------|
-| 0.05 | | |
-| 0.10 | | |
-| 0.15 | | |
-| 0.20 | | |
 
 ### Python Analysis
 
@@ -225,6 +225,7 @@ MA_ideal = 1.0 / (2.0 * np.tan(alpha))
 fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
 # Left: MA models for one friction value
+# mu is the pin friction coefficient here (f in the text), not the transmission angle
 mu = 0.12
 phi = np.arctan(mu)
 MA_friction = 1.0 / (2.0 * np.tan(alpha + phi))
@@ -264,10 +265,9 @@ for mu in [0.05, 0.12, 0.20]:
 
 ### Expected Results
 
-- The ideal curve diverges at TDC; the friction and engineering curves peak at a finite value and then fall
-- Raising pin friction from 0.05 to 0.20 noticeably lowers the achievable MA and clamping force
-- Efficiency scales the clamping force roughly linearly: dropping from 0.9 to 0.6 cuts the force by about a third
-- The simulator readings track the friction-and-efficiency model, not the ideal one
+- In the simulator at the 5-degree lock, raising pin friction from 0.05 to 0.20 lowers the clamping force from about 209 N to 158 N (a quarter). The two-link model in the script falls from 330 N to 156 N (half)
+- Efficiency from 0.9 to 0.6 lowers the simulator's force from about 198 N to 159 N: 20 percent, not a third, because the friction limit acts in both cases
+- The simulator lies below the two-link model at low friction and meets it near 0.20. Both are far below the ideal curve
 
 ### Design Question
 
@@ -280,18 +280,18 @@ A supplier offers low-friction bushings that drop the pin friction coefficient f
 <InArticleAd />
 
 
-Force amplification is only useful if the linkage can actually transmit it. The transmission angle at the toggle joint measures that: when it drops below about 40 degrees, the links push against each other instead of moving the load and the bearings see large side loads. A toggle clamp is unusual here, because it deliberately runs near the over-centre point where that angle is small. This experiment maps the transmission angle across the stroke and makes sense of that apparent contradiction.
+A large force in the main link is useful only if it turns the clamp arm. The transmission angle, between the main link and the clamp arm, measures that: below about 40 degrees most of the push presses on the pin (the same rule as in the [four-bar linkage experiments](/education/mechanism-design-simulation/four-bar-linkage-experiments/)). The medium-duty clamp is far below 40 degrees at lock and still holds. This experiment shows why, and what the low angle costs.
 
 :::note[Objective]
-Map the transmission angle across the handle stroke, measure how much of the travel sits below the classic 40-degree limit, and understand why a toggle clamp still works with a small transmission angle at its lock point.
+Map the transmission angle across the handle stroke, measure how much of the travel is below the 40-degree limit, and explain why a toggle clamp still works with a small transmission angle at its lock point.
 :::
 
 <Steps>
 1. **Configure the simulator**
-   Select the Medium-duty preset. Read the link lengths from the Geometry panel: handle Lh, main link Lm, arm Larm, base spacing d.
+   Select the Medium-duty preset. Read the link lengths from the Geometry panel: handle $L_h$, main link $L_m$, arm $L_{\text{arm}}$, base spacing $d$.
 
 2. **Predict**
-   The transmission angle is smallest where the links approach collinear. Predict whether the locked position keeps the angle above 40 degrees (the answer may surprise you).
+   The transmission angle is smallest where the main link and the clamp arm come closest to one line. Predict whether the locked position keeps the angle above 40 degrees.
 
 3. **Read the transmission-angle chart**
    Open the Transmission angle chart. Note the dashed 40-degree limit line, the high value when open, and where the curve sits at the locked position.
@@ -300,16 +300,8 @@ Map the transmission angle across the handle stroke, measure how much of the tra
    Increase the main link length by 30 percent, then the arm length, and watch how the transmission-angle curve shifts. Record the value at lock for each change.
 
 5. **Save data**
-   Download the analysis CSV from the simulator, keep the `handle_angle_deg` and `transmission_angle_deg` columns, and save them as `data/exp3_transmission.csv`.
+   Download the analysis CSV from the simulator, keep the `handle_angle_deg` and `transmission_angle_deg` columns, and save them as `data/exp3_transmission.csv`. Note the values at open, at TDC, and at lock.
 </Steps>
-
-### Data Collection Table
-
-| Handle angle (deg) | Transmission angle (deg) |
-|--------------------|--------------------------|
-| open | |
-| TDC | |
-| lock | |
 
 ### Python Analysis
 
@@ -355,22 +347,23 @@ plt.show()
 print(f"Source: {source}")
 print(f"Transmission angle range: {np.nanmin(mu):.1f} to {np.nanmax(mu):.1f} deg")
 print(f"Fraction of stroke below 40 deg: {100*np.nanmean(mu < 40):.0f}%")
-print("It is high when the clamp is open and small near the lock, because the links go")
-print("nearly collinear there. That same near-collinear geometry is what amplifies the")
-print("force, so a toggle clamp accepts a low transmission angle AT the lock point that a")
-print("continuously-rotating four-bar never could.")
+print("It is high when the clamp is open and small near the lock in this preset. A small")
+print("transmission angle costs force: the force gain comes from the handle and toggle link")
+print("coming into one line, not from the low angle. A clamp can accept it at the lock")
+print("because it only has to hold there, where a turning four-bar has to keep moving.")
 ```
 
 ### Expected Results
 
 - The transmission angle is high when the clamp is open (about 77 degrees for the medium-duty preset) and falls steadily as the handle moves toward top-dead-centre
-- At the locked position it is small, near 16 degrees, well below the classic 40-degree four-bar limit, and roughly 40 percent of the stroke sits below 40 degrees
-- This is expected, not a fault: near the lock the links are almost collinear, which is the same geometry that drives the force amplification, so the transmission angle and the force amplification trade off against each other
-- The practical concern is keeping the transmission angle healthy through the working approach (where the bar travels and lifts the load), while accepting that it collapses at the singular lock point
+- At lock it is near 16 degrees, and roughly 40 percent of the stroke is below 40 degrees
+- The clamp still holds, because nothing moves at lock: the stop keeps it closed, and the 40-degree rule is for links that move a load
+- The low angle costs force. For rigid links the MA is proportional to $\sin\mu / \sin\alpha$: the gain comes from a small toggle angle $\alpha$, and a small $\mu$ takes part of it back ($\sin 16^\circ = 0.28$). The light-duty and heavy-duty presets lock near 30 degrees
+- Keep the transmission angle high through the approach, where the clamping bar travels
 
 ### Design Question
 
-The default medium-duty clamp locks at a transmission angle near 16 degrees, yet it holds perfectly well. Explain why a toggle clamp can tolerate a transmission angle at its lock point that would be unacceptable in a continuously rotating four-bar, and name one situation where you would still want the locked transmission angle to be larger.
+The medium-duty clamp locks at a transmission angle near 16 degrees. Which link length would you change to raise that angle toward 30 degrees, and what happens to the TDC position and the handle travel when you do?
 
 ---
 
@@ -379,7 +372,7 @@ The default medium-duty clamp locks at a transmission angle near 16 degrees, yet
 <InArticleAd />
 
 
-A clamp that develops a large force must survive it. The toggle joint pin is in shear and the main link is in combined bending and tension. This experiment sizes both against a material allowable, the same Safe versus Over-stressed check the simulator reports.
+The force inside a toggle clamp is far larger than the force at the pad: 120 N at the handle of the medium-duty clamp puts about 3200 N into the main link at lock. A pin cut through by that force lets the handle fly back. The pin is in shear (the force tries to cut it across), and the link is pulled and bent. This experiment sizes both against an allowable stress, the simulator's Safe or Over-stressed check.
 
 :::note[Objective]
 Compute pin shear stress and link bending stress for the clamping load, compare them with the allowable stress from a yield strength and safety factor, and find the smallest safe pin diameter and link section.
@@ -390,10 +383,10 @@ Compute pin shear stress and link bending stress for the clamping load, compare 
    Select the Medium-duty preset. In the Material strength panel set yield strength to 350 MPa and safety factor to 2. Open the Link and pin stress chart and note the dashed allowable lines and the sizing verdict.
 
 2. **Predict**
-   Pin shear stress scales as 1 over diameter squared, so doubling the pin diameter cuts the shear stress to a quarter. Predict the smallest pin diameter that stays below the shear allowable.
+   Shear stress is the link force divided by the pin's cross-section area, which grows with the square of the diameter $d$. So the stress goes as $1/d^2$: twice the diameter, a quarter of the stress. Predict the smallest pin diameter that stays below the shear allowable.
 
 3. **Shrink the pin**
-   Reduce the pin diameter step by step and watch the verdict flip from Safe to Over-stressed. Record the diameter at the transition.
+   Reduce the pin diameter step by step from 10 mm to 4 mm and watch the verdict flip from Safe to Over-stressed. Record the diameter at the transition.
 
 4. **Shrink the link**
    Reset the pin, then reduce link thickness and width until the bending stress exceeds its allowable. Record the section at the transition.
@@ -401,15 +394,6 @@ Compute pin shear stress and link bending stress for the clamping load, compare 
 5. **Save data**
    Create `data/exp4_stress.csv` with columns: pin_diameter_mm, pin_shear_MPa, verdict.
 </Steps>
-
-### Data Collection Table
-
-| Pin diameter (mm) | Pin shear (MPa) | Verdict |
-|-------------------|-----------------|---------|
-| 4 | | |
-| 6 | | |
-| 8 | | |
-| 10 | | |
 
 ### Python Analysis
 
@@ -467,10 +451,10 @@ print(f"Smallest safe square link side ~ {s_min:.1f} mm")
 
 ### Expected Results
 
-- Pin shear stress falls steeply with diameter; there is a clear smallest diameter that stays below the shear allowable
-- Link bending stress falls with section size, with thickness mattering more than width because bending stiffness goes as thickness cubed
 - With yield 350 MPa and a safety factor of 2 the allowables are 175 MPa (bending) and about 88 MPa (shear)
-- The pin diameter and link section where the curves cross the allowable lines match where the simulator's verdict flips to Over-stressed
+- Pin shear stress falls steeply with diameter. The smallest diameter below the shear allowable is about 6.9 mm for a link force of 3200 N, which is where the simulator's verdict flips to Over-stressed
+- Link stress falls with section size. Thickness matters more than width, because the bending part of the stress falls with the square of the thickness
+- The script sizes a square link (smallest safe side about 8.4 mm). The simulator's 6 x 22 mm link stays Safe down to a thickness of about 5 mm
 
 ### Design Question
 
@@ -483,10 +467,10 @@ You can make the clamp safe either by increasing the pin diameter or by upgradin
 <InArticleAd />
 
 
-The lock margin, how far past TDC the handle rests, is the clamp's most important tuning parameter. A small margin gives huge clamping force but locks weakly and can creep open; a large margin locks firmly but needs more effort to release and delivers less force. This experiment maps that trade-off.
+The lock margin is how far past TDC the handle rests. With a small margin the clamp presses hard, but vibration can work the handle back through centre and open it. With a large margin it locks firmly but presses with less force. This experiment maps that trade.
 
 :::note[Objective]
-Quantify how clamping force and release security change with lock margin, and choose a margin that balances holding force against release effort.
+Measure how the clamping force and the security of the lock change with lock margin, and choose a margin that balances holding force against release effort.
 :::
 
 <Steps>
@@ -494,26 +478,17 @@ Quantify how clamping force and release security change with lock margin, and ch
    Select the Medium-duty preset. Keep handle force and friction fixed.
 
 2. **Predict**
-   The friction model MA = eta / (2 tan(alpha + phi)) falls as the margin alpha grows. Predict that doubling the margin roughly halves the clamping force at small angles.
+   The two-link friction model with efficiency $\eta$, $\text{MA} = \dfrac{\eta}{2\tan(\alpha + \phi)}$, takes the margin as the toggle angle $\alpha$. Its force falls slowly, about 30 percent from 5 to 10 degrees, because the friction angle $\phi$ (about $6.8^\circ$ for a pin friction of 0.12) is added to $\alpha$. In the real linkage the toggle angle is about 8 degrees at a 5-degree margin. Predict whether the simulator's force falls by more or by less than 30 percent.
 
 3. **Sweep the lock margin**
    Set the lock margin to 2, 4, 6, 8, 10, 12, and 15 degrees. At each value record the clamping force at lock.
 
 4. **Judge release security**
-   Note qualitatively how firmly the handle seats against the stop at small versus large margins (the lock highlight on the diagram appears near TDC).
+   The simulator cannot show how the handle feels. Use the script's release effort index (the sine of the margin): a larger margin means the handle must be pulled further back before the clamp opens.
 
 5. **Save data**
    Create `data/exp5_lockmargin.csv` with columns: lock_margin_deg, Fpad_sim.
 </Steps>
-
-### Data Collection Table
-
-| Lock margin (deg) | F_pad,sim (N) | Release feel |
-|-------------------|---------------|--------------|
-| 2 | | |
-| 6 | | |
-| 10 | | |
-| 15 | | |
 
 ### Python Analysis
 
@@ -565,10 +540,11 @@ for m in [2, 5, 10, 15]:
 
 ### Expected Results
 
-- Clamping force falls steeply as the lock margin grows, especially between 2 and 8 degrees
-- Release effort rises with margin, so very small margins are easy to pop open and large margins are secure but stiff
-- A margin around 4 to 6 degrees is a common compromise: strong force with a definite, secure lock
-- The simulator's clamping force at lock follows the same downward trend as the margin increases
+- Simulator clamping force at lock: about 366 N at 2 degrees, 182 N at 5, 89 N at 10, and 55 N at 15
+- From 5 to 10 degrees it falls by about half (51 percent). The two-link model in the script gives about 30 percent (217 N to 151 N), so it underestimates the loss in the real linkage
+- Release effort rises with margin: a very small margin opens easily, and a large one is secure but stiff
+- A very small margin also overloads the main link: about 317 MPa at 2 degrees and 208 MPa at 3 degrees against an allowable of 175 MPa, then 154 MPa at 4 degrees
+- A margin around 4 to 6 degrees is a common compromise
 
 ### Design Question
 
@@ -581,37 +557,32 @@ A clamp on a vibrating machine keeps creeping open at a 3-degree margin. You can
 <InArticleAd />
 
 
-The real design task is the inverse one: given a required hold-down force and a comfortable hand effort, which clamp size do you choose? This experiment uses the presets and the A/B comparison to select a clamp for a specified job.
+The real design task is the inverse one: given a required hold-down force and a comfortable hand effort, which clamp size do you choose? This experiment uses the presets and the A/B comparison to select a clamp for a specified job, and it shows where the simple toggle formula stops being a safe guide.
 
 :::note[Objective]
-Given a target clamping force and a maximum comfortable handle force, use the force models and the simulator's presets to select an appropriate clamp size, and verify the choice with the A/B comparison.
+Given a target clamping force and a maximum comfortable handle force, compare a simple toggle estimate with the simulator's readings for three presets, then select the smallest preset that meets the force target with a Safe stress verdict.
 :::
 
 <Steps>
 1. **Set the requirement**
-   Target hold-down force: 300 N. Maximum comfortable handle force: 100 N. Required MA is therefore at least 3.
+   Target hold-down force: 300 N. Maximum comfortable handle force: 100 N. Required MA is therefore at least $300 / 100 = 3$.
 
 2. **Predict**
-   The full clamp MA combines the handle lever ratio (Lh + Lg) / Lpad with the friction-limited toggle factor and efficiency. A long output arm (large Lpad) lowers the lever ratio, so the biggest preset is not automatically the strongest at a fixed hand force. Predict which preset clears MA = 3.
+   A quick estimate multiplies the handle lever ratio $(L_h + L_g) / L_{\text{pad}}$ by the friction-limited toggle factor and the efficiency: $\text{MA} \approx \dfrac{L_h + L_g}{L_{\text{pad}}} \cdot \dfrac{\eta}{2\tan(\alpha + \phi)}$. At a 2.5-degree lock margin this gives about 2.94 for the light-duty preset, 3.15 for medium-duty, and 3.42 for heavy-duty. Note your prediction, then test it: the formula describes an ideal two-link toggle, and the real clamp is a four-bar linkage.
 
-3. **Compare two presets**
-   In the simulator, load the Light-duty preset and click Save as Experiment A. Then load the Medium-duty preset (run B). Compare clamping force and stress on the overlaid charts.
+3. **Read the three presets**
+   Load the Light-duty preset, set the handle force to 100 N and the lock margin to 2.5 degrees, and keep yield strength at 350 MPa with a safety factor of 2. Record the engineering MA at lock, the clamping force at lock, the transmission angle at lock, the link stress, and the sizing verdict. Click Save as Experiment A, then repeat for the Medium-duty and Heavy-duty presets and compare clamping force and stress on the overlaid charts.
 
 4. **Pick and verify**
-   Choose the smallest preset that meets the force target with a Safe stress verdict, then set its handle force and lock margin to deliver 300 N at the pad.
+   No preset is Safe at 2.5 degrees. For each one, raise the lock margin in 0.5-degree steps until the verdict changes to Safe, and check whether the clamping force is still at least 300 N. Choose the smallest preset that meets both conditions.
 
 5. **Save data**
-   Create `data/exp6_selection.csv` with columns: preset, Fpad_sim, verdict.
+   Create `data/exp6_selection.csv` with one row for each preset at 2.5 degrees and one for your chosen preset: preset, lock_margin_deg, MA_sim, Fpad_sim, mu_lock_deg, link_stress_MPa, verdict.
 </Steps>
 
-### Data Collection Table
-
-| Preset | F_pad,sim (N) | Stress verdict |
-|--------|---------------|----------------|
-| Light-duty | | |
-| Medium-duty | | |
-
 ### Python Analysis
+
+The script solves the real four-bar geometry of each preset, so its numbers can be checked directly against the simulator panels.
 
 ```python title="experiment_6_selection.py"
 # Toggle Clamp Experiment 6: Selecting a Clamp for a Target Force
@@ -622,68 +593,138 @@ import os
 os.makedirs('plots', exist_ok=True)
 
 target_force = 300.0     # N required at the pad
-F_handle_max = 100.0     # N comfortable hand effort
-required_MA = target_force / F_handle_max
+F_handle = 100.0         # N comfortable hand effort
+required_MA = target_force / F_handle
+sigma_allow = 350.0 / 2  # MPa, yield 350 with a safety factor of 2
+tau_allow = sigma_allow / 2
 print(f"Required mechanical advantage: {required_MA:.1f}")
 
-eta = 0.76
-mu = 0.12
-phi = np.arctan(mu)
-margin_deg = 2.5                       # a small, practical lock margin
-toggle = 1.0 / (2.0 * np.tan(np.deg2rad(margin_deg) + phi))
-
-# Full MA = (handle lever ratio) x (friction toggle factor) x efficiency.
-# Preset handle lever ratio = (Lh + Lg) / Lpad
+# Preset geometry (mm), pin friction, efficiency, pin diameter, link section
 presets = {
-    'Light-duty':  (28 + 90) / 95.0,
-    'Medium-duty': (40 + 110) / 110.0,
-    'Heavy-duty':  (45 + 165) / 170.0,
+    'Light-duty':  dict(Lh=28, Lg=90,  Lm=58,  La=38, Lpad=95,  d=58,  f=0.12, eta=0.78, pin=6,  t=5, w=18),
+    'Medium-duty': dict(Lh=40, Lg=110, Lm=80,  La=55, Lpad=110, d=70,  f=0.12, eta=0.76, pin=8,  t=6, w=22),
+    'Heavy-duty':  dict(Lh=45, Lg=165, Lm=110, La=72, Lpad=170, d=100, f=0.10, eta=0.80, pin=12, t=8, w=28),
 }
 
-best = None
-for name, lever in presets.items():
-    MA = lever * eta * toggle
-    Fpad = MA * F_handle_max
-    meets = Fpad >= target_force
-    print(f"{name:12s}: lever={lever:.2f}, MA={MA:.2f}, F_pad at {F_handle_max:.0f} N = {Fpad:.0f} N  [{'MEETS' if meets else 'short'}]")
-    if meets and best is None:
-        best = name
+def cross(u, v):
+    return u[0] * v[1] - u[1] * v[0]
 
-# Plot clamping force vs handle force for the chosen preset
-lever = presets[best] if best else presets['Medium-duty']
-MA = lever * eta * toggle
-F_handle = np.linspace(20, 200, 300)
-F_pad = MA * F_handle
+def joints(p, th_deg):
+    """Handle joint A and toggle joint B (above the arm pivot) for a handle angle."""
+    th = np.deg2rad(th_deg)
+    A = np.array([p['Lh'] * np.cos(th), p['Lh'] * np.sin(th)])
+    O4 = np.array([p['d'], 0.0])
+    gap = O4 - A
+    dist = np.hypot(*gap)
+    a = (p['Lm']**2 - p['La']**2 + dist**2) / (2 * dist)
+    hh = np.sqrt(p['Lm']**2 - a**2)
+    B = A + a * gap / dist + hh * np.array([-gap[1], gap[0]]) / dist
+    return A, B, O4
 
+def tdc_angle(p):
+    """Handle angle where O2, A and B are collinear (bisection)."""
+    g = lambda th: cross(*joints(p, th)[:2])
+    lo, hi = 1.0, 60.0
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        if g(lo) * g(mid) <= 0:
+            hi = mid
+        else:
+            lo = mid
+    return 0.5 * (lo + hi)
+
+def at_lock(p, margin_deg):
+    A, B, O4 = joints(p, tdc_angle(p) - margin_deg)
+    AB = (B - A) / np.hypot(*(B - A))
+    arm = B - O4
+    lever = (p['Lh'] + p['Lg']) / p['Lpad']
+    beta = np.arctan(p['f'])
+    # Simple estimate: ideal symmetric two-link toggle, with friction and efficiency
+    MA_simple = lever * p['eta'] / (2 * np.tan(np.deg2rad(margin_deg) + beta))
+    # Real four-bar: velocity ratio of handle to clamp arm (virtual work)
+    MA_rigid = lever * abs(cross(arm, AB) / cross(A, AB))
+    # Simulator engineering model: rigid x efficiency, limited by a friction cap
+    alpha = np.arccos(np.clip(np.dot(A, AB) / p['Lh'], -1, 1))
+    cap = 1 / (2 * np.tan(alpha + beta) * np.tan(np.deg2rad(30)))
+    MA_eng = MA_rigid * p['eta'] / (1 + MA_rigid * p['eta'] / cap)
+    mu = np.degrees(np.arccos(abs(np.dot(AB, arm)) / p['La']))
+    # Main link force, link stress (axial + pin eccentricity bending), pin shear
+    F_link = F_handle * (p['Lh'] + p['Lg']) / abs(cross(A, AB))
+    sigma = F_link / (p['t'] * p['w']) + 3 * F_link * p['pin'] / (p['w'] * p['t']**2)
+    tau = F_link / (np.pi * p['pin']**2 / 4)
+    safe = sigma <= sigma_allow and tau <= tau_allow
+    return dict(simple=MA_simple, rigid=MA_rigid, eng=MA_eng, mu=mu,
+                Fpad=MA_eng * F_handle, sigma=sigma, tau=tau, safe=safe)
+
+print("\nAt a 2.5 degree lock margin and 100 N at the handle:")
+for name, p in presets.items():
+    r = at_lock(p, 2.5)
+    print(f"{name:12s}: simple MA={r['simple']:.2f}, four-bar rigid MA={r['rigid']:.2f}, "
+          f"engineering MA={r['eng']:.2f}, F_pad={r['Fpad']:.0f} N, mu={r['mu']:.1f} deg, "
+          f"link {r['sigma']:.0f} MPa, pin {r['tau']:.0f} MPa "
+          f"[{'Safe' if r['safe'] else 'Over-stressed'}]")
+
+# Sweep the lock margin: where does each preset meet the target with a Safe verdict?
+margins = np.arange(2.0, 8.01, 0.5)
 plt.figure(figsize=(8, 5))
-plt.plot(F_handle, F_pad, '-', color='#2A9D8F', lw=2,
-         label=f'{best or "Medium-duty"}: F_pad = {MA:.2f} x F_handle')
-plt.axhline(target_force, color='#ef4444', ls='--', label=f'Target {target_force:.0f} N')
-fh_needed = target_force / MA
-plt.axvline(fh_needed, color='#E9C46A', ls=':', label=f'Hand force needed ~ {fh_needed:.0f} N')
-plt.axvline(F_handle_max, color='#94a3b8', ls=':', label=f'Comfort limit {F_handle_max:.0f} N')
-plt.xlabel('Handle force (N)'); plt.ylabel('Clamping force at pad (N)')
-plt.title('Sizing the clamp to a target hold-down force')
+colors = {'Light-duty': '#E9C46A', 'Medium-duty': '#2A9D8F', 'Heavy-duty': '#264653'}
+best = None
+print("\nLock margins (0.5 degree steps) that give at least 300 N with a Safe verdict:")
+for name, p in presets.items():
+    res = [at_lock(p, m) for m in margins]
+    F = np.array([r['Fpad'] for r in res])
+    ok = np.array([r['safe'] for r in res])
+    good = [m for m, r in zip(margins, res) if r['safe'] and r['Fpad'] >= target_force]
+    print(f"{name:12s}: {', '.join(f'{m:.1f}' for m in good) if good else 'none'}")
+    if good and best is None:
+        best = (name, good[0], at_lock(p, good[0]))
+    plt.plot(margins, F, '-', color=colors[name], lw=2, label=name)
+    plt.plot(margins[~ok], F[~ok], 'x', color='#ef4444', ms=8)
+plt.plot([], [], 'x', color='#ef4444', label='Over-stressed')
+plt.axhline(target_force, color='#94a3b8', ls='--', label=f'Target {target_force:.0f} N')
+plt.xlabel('Lock margin (degrees)'); plt.ylabel('Clamping force at pad (N)')
+plt.title('Clamping force at 100 N hand force, three presets')
 plt.legend(); plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('plots/exp6_selection.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-print(f"\nChosen preset: {best or 'none meets it at this margin'}")
-print(f"It needs about {fh_needed:.0f} N of hand effort for {target_force:.0f} N at the pad (limit {F_handle_max:.0f} N).")
-print("Note: a longer output arm (large Lpad) lowers the lever ratio, so a bigger preset is not always stronger at the same hand force.")
+name, m, r = best
+print(f"\nChosen preset: {name} at a {m:.1f} degree lock margin")
+print(f"F_pad = {r['Fpad']:.0f} N, link stress = {r['sigma']:.0f} MPa (allowable {sigma_allow:.0f} MPa), "
+      f"pin shear = {r['tau']:.0f} MPa (allowable {tau_allow:.0f} MPa)")
+```
+
+Running the script prints:
+
+```text
+Required mechanical advantage: 3.0
+
+At a 2.5 degree lock margin and 100 N at the handle:
+Light-duty  : simple MA=2.94, four-bar rigid MA=13.57, engineering MA=3.22, F_pad=322 N, mu=31.9 deg, link 328 MPa, pin 227 MPa [Over-stressed]
+Medium-duty : simple MA=3.15, four-bar rigid MA=8.20, engineering MA=2.64, F_pad=264 N, mu=17.2 deg, link 210 MPa, pin 110 MPa [Over-stressed]
+Heavy-duty  : simple MA=3.42, four-bar rigid MA=15.66, engineering MA=3.72, F_pad=372 N, mu=29.6 deg, link 184 MPa, pin 66 MPa [Over-stressed]
+
+Lock margins (0.5 degree steps) that give at least 300 N with a Safe verdict:
+Light-duty  : none
+Medium-duty : none
+Heavy-duty  : 3.0, 3.5
+
+Chosen preset: Heavy-duty at a 3.0 degree lock margin
+F_pad = 333 N, link stress = 153 MPa (allowable 175 MPa), pin shear = 55 MPa (allowable 88 MPa)
 ```
 
 ### Expected Results
 
-- The required mechanical advantage for the stated job is 3
-- At a small (about 2.5-degree) lock margin the medium-duty preset (lever ratio about 1.36) reaches MA just above 3 and meets the 300 N target at the 100 N hand limit; the light-duty preset falls a little short
-- The heavy-duty preset has a long output arm and therefore a lower lever ratio, so it is not stronger at the same hand force despite its size, a useful reminder that bigger is not automatically stronger
-- The A/B overlay confirms that the chosen preset clears both the force target and a Safe stress verdict
+- At a 2.5-degree lock margin and 100 N at the handle, light-duty (322 N) and heavy-duty (372 N) clear the 300 N target in the simulator; medium-duty (264 N) falls short
+- The simple estimate (2.94, 3.15, 3.42) puts medium-duty above light-duty, which is the wrong order. That formula is for an ideal symmetric two-link toggle. It ignores the transmission angle, which takes force from a preset that locks at a small one: medium-duty locks at about 17 degrees, against about 32 and 30 degrees for the other two
+- All three presets are Over-stressed at 2.5 degrees: the link stress is 328, 210, and 184 MPa against an allowable of 175 MPa
+- The smallest preset that meets 300 N with a Safe verdict is heavy-duty, at a 3-degree lock margin: 333 N at the pad with a link stress of 153 MPa. Medium-duty becomes Safe at 3.5 degrees but then gives only 206 N, and light-duty becomes Safe only at 7 degrees with 153 N
+- The larger clamp is chosen here for the strength of its links and pins at the required force, more than for a higher mechanical advantage
 
 ### Design Question
 
-Your target rises from 300 N to 600 N but the hand effort must stay at 100 N. Reducing the lock margin raises MA but runs into the friction ceiling; increasing the handle lever ratio (a longer handle or a shorter pad arm) also raises MA. Which lever would you pull first, and what physical limit eventually stops each one?
+Your target rises from 300 N to 600 N but the hand effort must stay at 100 N. Reducing the lock margin raises MA but also raises the link and pin stress, and it runs into the friction ceiling; increasing the handle lever ratio (a longer handle or a shorter pad arm) also raises MA. Which change would you try first, and what physical limit eventually stops each one?
 
 ---
 

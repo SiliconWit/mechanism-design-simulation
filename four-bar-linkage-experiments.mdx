@@ -25,43 +25,51 @@ import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/sta
 
 import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
-Every mechanism textbook presents the Grashof condition as a simple inequality: s + l must be less than or equal to p + q. Students memorize it, apply it on exams, and move on. But what does it actually look like when a mechanism transitions from Grashof to non-Grashof? What happens to the transmission angle, the velocity ratios, the coupler curve? These experiments let you see, measure, and analyze the behaviors that the inequality alone cannot convey. #FourBarLinkage #GrashofCondition #MechanismDesign
+A wiper linkage is built, the motor is switched on, and the arm stops halfway across the glass. Every bar was cut to the drawing. What failed is something a list of bar lengths does not show: at one crank angle the linkage cannot pass on the push of the motor, or the crank cannot turn all the way round. In these nine experiments you change the four lengths in a simulator and find which sets turn fully, where each one pushes weakly, and how close a working design is to one that locks. #FourBarLinkage #GrashofCondition #MechanismDesign
 
 :::tip[What you need]
 Open the [Four-Bar Linkage Simulator](/product-development/four-bar-linkage-simulator/) in a separate browser tab. You will use it throughout all nine experiments. For data analysis, you need Python 3 with NumPy and Matplotlib.
 :::
 
 :::note[Related resources]
-Want to build a 3D model of this mechanism? See the [Four-Bar Linkage Mechanism Design](/education/parametric-mechanical-cad-freecad/four-bar-linkage-mechanism) lesson in our FreeCAD course. For the crank-slider experiments, see [Lesson 1](/education/mechanism-design-simulation/crank-slider-experiments). For a feature overview, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+To build a 3D model of this mechanism, see the [Four-Bar Linkage Mechanism Design](/education/parametric-mechanical-cad-freecad/four-bar-linkage-mechanism/) lesson in our FreeCAD course. The same method is used on a piston mechanism in the [crank-slider experiments](/education/mechanism-design-simulation/crank-slider-experiments/). For a feature overview, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
 :::
+
+## The four-bar linkage in brief
+
+A four-bar linkage is four rigid bars joined in a loop by four pin joints. One bar is the frame of the machine and does not move: the ground. A motor turns the bar next to it, the crank. A third bar, the coupler, carries the motion across to the last bar, the follower, which is the output.
+
+You have seen one in a car wiper (the motor turns fully and the wiper arm swings), in an oil well pump jack, in a bus door and in a folding chair.
+
+```text
+                     coupler b
+          A o--------------------------o B
+           /                            \
+  crank a /                              \ follower c
+         /                                \ (output)
+     O2 o----------------------------------o O4
+      motor          ground d          output pivot
+```
+
+The experiments answer three questions that a designer must settle before cutting metal. Can the motor turn the crank all the way round? How well does the coupler push the follower at each position? How much may the lengths vary before the answers change?
 
 ## Key Terms
 
 | Term | Meaning |
 |------|---------|
-| **a** | Input crank length (mm), the driven link |
-| **b** | Coupler length (mm), the floating link connecting the two moving joints |
-| **c** | Follower/rocker length (mm), the output link |
-| **d** | Ground/frame length (mm), the fixed distance between the two pivot points |
-| **Grashof** | A linkage where s + l is at most p + q (s = shortest, l = longest, p and q = remaining). At least one link can make a full rotation |
-| **Crank-rocker** | Grashof linkage where the shortest link is the input: it rotates fully while the output oscillates |
-| **Double-crank** | Grashof linkage where the shortest link is the ground: both input and output rotate fully |
-| **Double-rocker** | Either non-Grashof (no full rotation) or Grashof with the coupler as shortest link |
-| **Transmission angle** | The angle between the coupler and follower. Below about 40 degrees, force transmission becomes poor |
-| **Coupler curve** | The path traced by a point on the coupler link as the mechanism moves |
-| **Circuit** | The two possible assembly configurations (open and crossed) for the same link lengths |
-
-### Experiment Workflow
-
-```mermaid
-flowchart TD
-    A[Predict] --> B[Configure Simulator]
-    B --> C[Run Experiment]
-    C --> D[Read Charts and Panels]
-    D --> E[Record in CSV]
-    E --> F[Run Python Script]
-    F --> G[Compare and Analyze]
-```
+| **$a$** | Crank length (mm): the bar that the motor turns |
+| **$b$** | Coupler length (mm): the bar that joins the crank (at joint A) to the follower (at joint B). Neither end is fixed to the frame |
+| **$c$** | Follower length (mm): the output bar, also called the rocker when it only swings |
+| **$d$**, **$e$** | Ground: the horizontal distance $d$ and the vertical offset $e$ (mm) between the two fixed pivots $O_2$ and $O_4$ |
+| **$\theta_2$, $\theta_3$, $\theta_4$** | Angles of the crank, the coupler and the follower (degrees), measured from the horizontal |
+| **$\omega$, $\alpha$** | Angular velocity ($\text{rad/s}$) and angular acceleration ($\text{rad/s}^2$) of a bar. The number names the bar, so $\omega_4$ and $\alpha_4$ belong to the follower |
+| **Grashof** | Add the shortest length $s$ and the longest length $l$. If $s + l \le p + q$, where $p$ and $q$ are the other two lengths, at least one bar can turn fully. If not, every bar only rocks |
+| **Crank-rocker** | Grashof linkage where the shortest bar is the crank: it turns fully while the follower swings |
+| **Double-crank** | Grashof linkage where the shortest bar is the ground: both crank and follower turn fully |
+| **Double-rocker** | Either non-Grashof (no full rotation) or Grashof with the coupler as the shortest bar |
+| **Transmission angle $\mu$** | The angle between the coupler and the follower at joint B, taken between $0^\circ$ and $90^\circ$. Near $90^\circ$ the coupler pushes across the follower and turns it well. Below about $40^\circ$ most of the push only loads the bearings |
+| **Coupler curve** | The path traced by a point on the coupler as the mechanism moves |
+| **Circuit** | The two ways to assemble the same four bars: open and crossed. They are mirror images about the line from A to $O_4$. In the simulator, open puts joint B on the left of that line as you look from A toward $O_4$ |
 
 ## Setting Up Your Workspace
 
@@ -89,7 +97,7 @@ flowchart TD
 
 ### How to Record Data
 
-For each experiment, read values from the simulator's charts and summary panels. Save as CSV files. Alternatively, download the complete CSV from the simulator's download section.
+For each experiment: predict, set the simulator, click "Run Full Experiment", then read values from the charts (hover over a curve) and from the summary panels under them, and type them into a CSV file. The download section of the simulator also offers the complete data set as one CSV. Every script below also runs with no CSV: it then prints the calculated values only.
 
 :::tip[Instrument it]
 The real question on a four-bar is whether it traces the motion you actually designed: backlash, frame flex, and joint clearance all pull the output off the ideal path. Put an encoder on the input crank and another on the output link to measure the true input-to-output relationship, so you can verify the timing, tune it, and later watch lost motion grow as the joints wear. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads them, and on a small board it can [stream](/education/iot-systems/) the comparison and [trend it over time](https://siliconwit.io).
@@ -100,7 +108,9 @@ The real question on a four-bar is whether it traces the motion you actually des
 <InArticleAd />
 
 
-Every four-bar linkage falls into one of two categories: Grashof (at least one link can fully rotate) or non-Grashof (no link can complete a full turn). This single classification determines whether a mechanism can be used as a crank input or only as a rocker. The Grashof inequality is simple math, but watching a mechanism transition from rotatable to locked is something no equation can convey. You will build four configurations, predict their classification, and verify against the simulator.
+A motor turns in one direction without stopping. If the bar it drives cannot go all the way round, the motor stalls against the linkage and something bends or burns. So the first check on any four-bar is whether the driven bar can make a full turn.
+
+The Grashof condition answers this from the lengths alone. If the shortest length plus the longest, $s + l$, is smaller than the sum of the other two, $p + q$, the shortest bar can turn fully (Grashof). If it is larger, no bar can (non-Grashof). You will build four linkages on and near that boundary, predict each one, and check it.
 
 :::note[Objective]
 Verify the Grashof condition experimentally by building linkages at and near the Grashof boundary, and observe how the mechanism behavior changes.
@@ -108,26 +118,20 @@ Verify the Grashof condition experimentally by building linkages at and near the
 
 <Steps>
 1. **Crank-rocker (Grashof)**
-   Set a=40, b=120, c=80, d=100. Predict: s+l = 40+120 = 160, p+q = 80+100 = 180. Grashof: yes. Run the experiment and start the animation. The input crank should complete full rotations.
+   Set $a=40$, $b=120$, $c=80$, $d=100$. Predict: $s+l = 40+120 = 160$, $p+q = 80+100 = 180$. Grashof: yes. Run the experiment and start the animation. The crank should complete full rotations.
 
 2. **Make it non-Grashof**
-   Change a=80 (so now s=80, l=120, s+l=200 is greater than p+q=180). Run the experiment. The animation should stop at certain angles because the crank cannot complete a full rotation.
+   Change $a=80$ (so now $s=80$, $l=120$, and $s+l=200$ is greater than $p+q=180$). Run the experiment. Start the animation. Near $\theta_2 = 0$ the drawing is replaced by the message "Invalid configuration", and the charts sit flat at zero: there joint A is so close to $O_4$ that the coupler and the follower cannot meet.
 
 3. **Boundary case**
-   Set a=60, b=120, c=80, d=100. Now s+l = 60+120 = 180 = p+q. This is a change-point mechanism. Run and observe the behavior at the singular positions.
+   Set $a=60$, $b=120$, $c=80$, $d=100$. Now $s+l = 60+120 = 180 = p+q$. This is a change-point mechanism. Run it and look at $\theta_2 = 0$: all four bars lie along the ground line, the transmission angle reads $0^\circ$, and from there the follower is free to leave in either direction. A real machine can jump to the other assembly at this point.
 
-4. **Record Grashof status**
-   For each configuration, note whether the crank completes a full rotation, the Grashof type shown in the simulator, and the minimum transmission angle. Save as `data/exp1_grashof.csv`.
+4. **Double-crank**
+   Select the Double-Crank preset ($a=60$, $b=80$, $c=70$, $d=40$). The shortest bar is now the ground, and both the crank and the follower turn fully.
+
+5. **Record Grashof status**
+   For each of the four configurations, record $s+l$, $p+q$, the Grashof type shown in the simulator, whether the crank completes a full rotation, and the minimum transmission angle. Save as `data/exp1_grashof.csv`.
 </Steps>
-
-### Data Collection Table
-
-| Configuration | s+l | p+q | Grashof? | Full rotation? | Min transmission angle |
-|---------------|-----|-----|----------|----------------|----------------------|
-| a=40, b=120, c=80, d=100 | | | | | |
-| a=80, b=120, c=80, d=100 | | | | | |
-| a=60, b=120, c=80, d=100 | | | | | |
-| a=20, b=80, c=60, d=50 | | | | | |
 
 ### Python Analysis
 
@@ -170,7 +174,7 @@ def solve_fourbar(a, b, c, d, e, theta2_deg):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
     t3 = np.degrees(np.arctan2(By-Ay, Bx-Ax))
     t4 = np.degrees(np.arctan2(By-e, Bx-d))
     return {'theta3': t3, 'theta4': t4}
@@ -233,53 +237,51 @@ if sim_data:
 
 ### Expected Results
 
-- a=40, b=120, c=80, d=100: Grashof (s+l=160 < p+q=180), crank completes full rotation
-- a=80, b=120, c=80, d=100: Non-Grashof (s+l=200 > p+q=180), crank locks at certain angles
-- a=60, b=120, c=80, d=100: Change-point (s+l=180 = p+q), mechanism reaches singular positions
-- a=20, b=80, c=60, d=50: Grashof double-crank (shortest link is ground)
+- $a=40$, $b=120$, $c=80$, $d=100$: Grashof ($s+l=160 < p+q=180$), crank completes full rotation
+- $a=80$, $b=120$, $c=80$, $d=100$: Non-Grashof ($s+l=200 > p+q=180$), crank locks within about $22.3^\circ$ of $\theta_2 = 0$, so 315 of the 361 positions are valid
+- $a=60$, $b=120$, $c=80$, $d=100$: Change-point ($s+l=180 = p+q$), mechanism reaches singular positions
+- $a=60$, $b=80$, $c=70$, $d=40$: Grashof double-crank ($s+l=120 < p+q=130$, shortest link is ground). This is the simulator's double-crank preset
 
 ### Design Question
 
-You need a mechanism where the input crank makes full rotations but the output oscillates. Which link must be the shortest? What happens if manufacturing errors make one link 2mm longer than specified, pushing s+l past the boundary?
-
-### Challenge: Ground Offset Preview
-
-Try increasing the ground offset slider from 0 to 50mm on the crank-rocker preset. Watch the Grashof indicator change. At what offset does the mechanism lose its crank-rocker behavior? This is explored in full detail in [Experiment 9](#experiment-9-ground-offset-and-effective-ground-length).
+You need a mechanism where the input crank makes full rotations but the output oscillates. Which link must be the shortest? What happens if manufacturing errors make one link $2\,\text{mm}$ longer than specified, pushing $s+l$ past the boundary?
 
 ## Experiment 2: Transmission Angle and Mechanism Quality
 
 <InArticleAd />
 
 
-A mechanism can satisfy the Grashof condition and still be useless if the transmission angle drops too low. The transmission angle determines how effectively force is transmitted from input to output. Below about 40 degrees, friction and compliance dominate, and the mechanism feels "dead." This experiment quantifies where the transmission angle problems occur and how link proportions control them.
+A linkage can pass the Grashof test and still stall under load. The coupler can only push along its own length, and only the part of that push that acts across the follower turns it: the push multiplied by $\sin\mu$, where $\mu$ is the transmission angle.
+
+At $\mu = 90^\circ$ all of the push turns the follower. At $40^\circ$ it is 64%. At $26^\circ$ it is 44%, and the rest only presses on the bearings, where friction can hold the linkage still. So designers try to keep $\mu$ above about $40^\circ$ over the whole turn. This experiment finds where $\mu$ is smallest and how the lengths control it.
 
 :::note[Objective]
-Map how transmission angle varies through the cycle for different link ratios, and identify configurations where the minimum transmission angle drops below the 40-degree practical limit.
+Map how transmission angle varies through the cycle for different link ratios, and identify configurations where the minimum transmission angle drops below the $40^\circ$ practical limit.
 :::
 
 <Steps>
-1. **Good transmission angle**
-   Use the crank-rocker preset (a=40, b=120, c=80, d=100). Run the experiment. Note the min and max transmission angle from the summary panel.
+1. **Baseline transmission angle**
+   Use the crank-rocker preset ($a=40$, $b=120$, $c=80$, $d=100$). Run the experiment. Open the Transmission Angle tab. Note Min $\mu$ and Max $\mu$ from the summary panel, and the crank angle at which the curve is lowest.
 
 2. **Save as Experiment A**
 
 3. **Degrade the transmission angle**
-   Change c=40 (shorter follower). Run the experiment. The transmission angle should dip lower.
+   Change $c=40$ (shorter follower). Run the experiment. The transmission angle should dip lower. This linkage is no longer Grashof ($s+l=160 > p+q=140$), so the crank also locks over part of the turn.
 
 4. **Improve the transmission angle**
-   Clear Experiment A. Set a=30, b=100, c=90, d=100. Run the experiment. Compare the transmission angle range.
+   Clear Experiment A. Set $a=30$, $b=100$, $c=90$, $d=100$. Run the experiment. Check whether the whole curve now stays above $40^\circ$.
 
 5. **Collect data**
-   For each configuration, record min and max transmission angle. Save as `data/exp2_transmission.csv`. Alternatively, download the CSV from the simulator.
+   For each configuration, record min and max transmission angle. Save as `data/exp2_transmission.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Configuration | Min transmission angle | Max transmission angle | Below 40 degrees? |
+| Configuration | Min transmission angle | Max transmission angle | Below $40^\circ$? |
 |---------------|----------------------|----------------------|-------------------|
-| a=40, b=120, c=80, d=100 | | | |
-| a=40, b=120, c=40, d=100 | | | |
-| a=30, b=100, c=90, d=100 | | | |
+| $a=40$, $b=120$, $c=80$, $d=100$ | | | |
+| $a=40$, $b=120$, $c=40$, $d=100$ | | | |
+| $a=30$, $b=100$, $c=90$, $d=100$ | | | |
 
 ### Python Analysis
 
@@ -322,7 +324,7 @@ def solve_fourbar(a, b, c, d, e, theta2_deg):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
     t3 = np.degrees(np.arctan2(By-Ay, Bx-Ax))
     t4 = np.degrees(np.arctan2(By-e, Bx-d))
     mu = abs(t3 - t4)
@@ -380,9 +382,9 @@ plt.show()
 
 ### Expected Results
 
-- Baseline (a=40, b=120, c=80, d=100): transmission angle stays well above 40 degrees
-- Short follower (c=40): transmission angle dips significantly, potentially below the 40-degree limit
-- Improved (a=30, b=100, c=90, d=100): more uniform transmission angle through the cycle
+- Baseline ($a=40$, $b=120$, $c=80$, $d=100$): transmission angle runs from $26.4^\circ$ (at $\theta_2 = 0$) to $86.4^\circ$ (at $\theta_2 = 180^\circ$), so it drops below the $40^\circ$ limit even though the linkage is Grashof
+- Short follower ($c=40$): the linkage is non-Grashof ($s+l=160 > p+q=140$). The crank cannot pass within about $49.5^\circ$ of $\theta_2 = 0$, and the transmission angle falls toward $0^\circ$ at those limits (the script reports $6.3^\circ$ on its $1^\circ$ grid)
+- Improved ($a=30$, $b=100$, $c=90$, $d=100$): transmission angle runs from $42.8^\circ$ to $86.2^\circ$, above the $40^\circ$ limit through the whole cycle
 
 ### Design Question
 
@@ -390,14 +392,14 @@ You are designing a mechanism for a packaging machine that must transmit force r
 
 ### Challenge: Quick-Return Time Ratio
 
-For a crank-rocker, the follower spends more time on one stroke than the other (the crank sweeps different arc lengths for forward vs return). Using the time domain toggle (switch x-axis to Time), measure how long the follower takes for the forward swing vs the return swing with the crank-rocker preset. Then add a ground offset of e=30mm. Does the time ratio change? This ratio matters for machines like shapers that need a fast idle return.
+The follower of a crank-rocker takes longer over one swing than over the other. Switch the x-axis to Time and measure both swings with the crank-rocker preset (the ratio is about 1.36). Then add a ground offset of $e=30\,\text{mm}$. Does the ratio change? It matters for machines that need a fast idle return.
 
 ## Experiment 3: Comparing the Four Presets
 
 <InArticleAd />
 
 
-A crank-rocker, a double-crank, a double-rocker, and a parallelogram are all four-bar linkages. But they behave completely differently. By overlaying their angular velocity profiles, you can see why each type is suited to different applications: crank-rockers for oscillating output, double-cranks for speed ratio control, parallelograms for parallel motion (like bus doors and drafting machines).
+If you choose the wrong type of four-bar, no change of size will rescue the design: a wiper needs an output that swings, a conveyor drive needs one that turns fully, and a bus door needs one that stays parallel to itself. The type is decided by which bar is the shortest. This experiment puts four of the simulator's presets on the same charts so that you can see what each type gives. (The fifth preset, Triple-Rocker, is a non-Grashof linkage like the one you built in Experiment 1.)
 
 :::note[Objective]
 Compare the four Grashof classifications side by side and identify which kinematic properties make each type suitable for its applications.
@@ -408,18 +410,18 @@ Compare the four Grashof classifications side by side and identify which kinemat
    Select the preset. Run the experiment. Save as Experiment A.
 
 2. **Double-crank preset**
-   Select it. Run the experiment. Compare the overlay.
+   Select it. Run the experiment. On the Follower $\theta_4$ chart, the new curve covers the whole range of angles while Experiment A stays inside a band.
 
 3. **Double-rocker and parallelogram**
-   Repeat for each, comparing against Experiment A.
+   Repeat for each, comparing against Experiment A. For the double-rocker, note the crank angles where the curve sits flat at zero: the loop cannot close there. For the parallelogram, compare $\theta_4$ with the crank angle before and after $180^\circ$.
 
 4. **Collect data**
-   For each preset, record: follower oscillation range (theta4 max minus min), max omega4, and min transmission angle. Save as `data/exp3_presets.csv`. Alternatively, download the CSV from the simulator for each preset.
+   For each preset, record: follower oscillation range ($\theta_4$ max minus min), max $\omega_4$, and min transmission angle. The presets run at different speeds, so read the speed too before you compare $\omega_4$. Save as `data/exp3_presets.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Preset | Follower oscillation (degrees) | Max omega4 (rad/s) | Min transmission angle |
+| Preset | Follower oscillation (degrees) | Max $\omega_4$ ($\text{rad/s}$) | Min transmission angle |
 |--------|-------------------------------|--------------------|-----------------------|
 | Crank-Rocker | | | |
 | Double-Crank | | | |
@@ -468,7 +470,7 @@ def solve_fourbar(a, b, c, d, e, theta2_deg):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
     t3 = np.degrees(np.arctan2(By-Ay, Bx-Ax))
     t4 = np.degrees(np.arctan2(By-e, Bx-d))
     return {'theta3': t3, 'theta4': t4}
@@ -531,10 +533,10 @@ plt.show()
 
 ### Expected Results
 
-- Crank-rocker: follower oscillates over a limited range (typically 40-80 degrees)
-- Double-crank: both links rotate fully, follower angle covers 360 degrees
-- Double-rocker: neither input nor output completes full rotation, both oscillate
-- Parallelogram: follower angle tracks input angle exactly (constant velocity ratio of 1)
+- Crank-rocker: follower oscillates over a limited range (typically $40^\circ$ to $80^\circ$; $73.8^\circ$ for this preset)
+- Double-crank: both links rotate fully, follower angle covers $360^\circ$
+- Double-rocker: neither input nor output completes full rotation, both oscillate. The loop closes at only 106 of the 361 crank positions ($10^\circ$ to $62^\circ$ and $298^\circ$ to $350^\circ$)
+- Parallelogram: from $\theta_2 = 0$ to $180^\circ$ the follower angle equals the crank angle exactly (velocity ratio of 1). At $180^\circ$ all four bars lie in one line, a change point as in Experiment 1. The simulator keeps joint B on the same side of the line from A to $O_4$, so after $180^\circ$ it shows the other assembly (the antiparallelogram), where the follower turns back. Real parallelogram machines add a second linkage or a stop to prevent this
 
 ### Analysis Question
 
@@ -542,14 +544,14 @@ A windshield wiper needs oscillating output from a rotating motor. Which preset 
 
 ### Challenge: Find Your Own Application
 
-Identify a real mechanism around you (a door closer, a folding chair, a car hood hinge, a pair of pliers, a bicycle brake lever) and try to estimate its link lengths. Enter them in the simulator and see if the behavior matches what you observe in real life. Document: what type of four-bar is it? Does it match a Grashof classification? What is its transmission angle range?
+Estimate the bar lengths of a real mechanism near you (a door closer, a folding chair, a car hood hinge, locking pliers). Enter them in the simulator. Which type of four-bar is it, and what is its transmission angle range?
 
 ## Experiment 4: Open vs Crossed Circuit
 
 <InArticleAd />
 
 
-Every four-bar linkage has two valid assembly configurations for the same link lengths: open and crossed. Most textbooks mention this in passing, but the difference is dramatic. The same physical links produce completely different motion, different transmission angles, and different velocity profiles depending on which circuit you use. The simulator lets you switch between them instantly.
+On the bench, the same four bars fit together in two ways: with the crank held still, joint B can sit on either side of the line from A to $O_4$. If the fitter builds the wrong one, the output swings on the wrong side of the frame and may hit the machine. The two assemblies are the open and the crossed circuit. This experiment shows what changes between them and what does not.
 
 :::note[Objective]
 Compare the open and crossed assembly configurations for the same link lengths, and understand when each is preferable.
@@ -557,18 +559,18 @@ Compare the open and crossed assembly configurations for the same link lengths, 
 
 <Steps>
 1. **Open circuit**
-   Use crank-rocker preset (a=40, b=120, c=80, d=100). Ensure circuit is "Open". Run the experiment. Save as Experiment A.
+   Use crank-rocker preset ($a=40$, $b=120$, $c=80$, $d=100$). Ensure the assembly is "Open": joint B is above the ground line. Run the experiment. Save as Experiment A.
 
 2. **Crossed circuit**
-   Change the assembly configuration to "Crossed". Run the experiment. Compare the overlay, especially the transmission angle.
+   Change the assembly configuration to "Crossed": joint B moves below the ground line. Run the experiment. On the Follower $\theta_4$ chart the two curves are different. On the Transmission Angle chart they lie exactly on top of each other.
 
 3. **Collect data**
-   Record theta4 range and min transmission angle for each circuit. Save as `data/exp4_circuits.csv`. Alternatively, download the CSV from the simulator for each configuration.
+   Record $\theta_4$ range and min transmission angle for each circuit. Save as `data/exp4_circuits.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Circuit | &theta;₄ min | &theta;₄ max | Oscillation | Min &mu; |
+| Circuit | $\theta_4$ min | $\theta_4$ max | Oscillation | Min $\mu$ |
 |---------|----------|----------|-------------|----------|
 | Open | | | | |
 | Crossed | | | | |
@@ -620,7 +622,7 @@ def solve_fourbar_circuit(a, b, c, d, e, theta2_deg, circuit='open'):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    sign = 1 if circuit == 'open' else -1
+    sign = -1 if circuit == 'open' else 1
     Bx = mx + sign * h * dy / dist
     By = my - sign * h * dx / dist
     t4 = np.degrees(np.arctan2(By - e, Bx - d))
@@ -685,16 +687,17 @@ plt.show()
 
 ### Expected Results
 
-- The open and crossed circuits produce completely different theta4 profiles for the same link lengths
-- One circuit typically has better transmission angle than the other
-- The crossed circuit may have the follower rotating in the opposite sense
+- The open and crossed circuits produce different $\theta_4$ profiles for the same link lengths: $\theta_4$ swings from $54.9^\circ$ to $128.7^\circ$ in the open circuit and from $-128.7^\circ$ to $-54.9^\circ$ in the crossed circuit
+- At each crank angle the two assemblies are mirror images about the line from A to $O_4$, so the angle between coupler and follower is the same in both. The transmission angle curves are identical: $46.6^\circ$ at $\theta_2 = 60^\circ$ in both circuits, and $26.4^\circ$ to $86.4^\circ$ over the turn
+- The follower does differ. At $\theta_2 = 60^\circ$ it stands at $64.9^\circ$ in the open circuit and at $-111.8^\circ$ in the crossed circuit
+- With no ground offset, $\theta_4$ crossed at $\theta_2$ equals minus $\theta_4$ open at $360^\circ - \theta_2$, so $\omega_4$ crossed at $60^\circ$ equals $\omega_4$ open at $300^\circ$ ($-3.54\,\text{rad/s}$ at $60\,\text{RPM}$)
 
 ## Experiment 5: Coupler Curve Exploration
 
 <InArticleAd />
 
 
-The coupler curve is perhaps the most powerful and least appreciated feature of the four-bar linkage. The path traced by a point on the coupler can approximate straight lines, circles, figure-eights, and complex shapes depending on the link proportions and point location. This is how mechanisms generate complex output motion from simple rotary input, without gears or cams.
+Many machines must move a part along a path that is neither a circle nor a straight line, such as a hand that lifts a carton and sets it down. A motor only gives a circle. A point on the coupler is fixed to neither pivot, so it traces its own closed path, the coupler curve, without gears or cams. The designer's worry is which lengths give the path that is needed.
 
 :::note[Objective]
 Observe how link proportions change the coupler curve shape, and identify configurations that produce approximately straight-line motion.
@@ -702,18 +705,15 @@ Observe how link proportions change the coupler curve shape, and identify config
 
 <Steps>
 1. **Crank-rocker coupler curve**
-   Use the crank-rocker preset. Enable "Show Paths and Coupler Curve". The purple trace shows the coupler midpoint path.
+   Use the crank-rocker preset. Enable "Show Paths and Coupler Curve". The purple trace shows the path of the midpoint of the coupler.
 
 2. **Change link proportions**
-   Try a=30, b=150, c=100, d=100. The coupler curve changes dramatically.
+   Try $a=30$, $b=150$, $c=100$, $d=100$. Note how the curve becomes longer and flatter.
 
 3. **Parallelogram**
-   Use the parallelogram preset. The coupler curve should be a circle (all points on the coupler trace circles when a=c and b=d).
+   Use the parallelogram preset. From $\theta_2 = 0$ to $180^\circ$ the trace is half of a circle of radius $60\,\text{mm}$: when $a=c$ and $b=d$ the coupler does not rotate, so every point on it copies the circle of joint A. After $180^\circ$ the simulator shows the antiparallelogram, as in Experiment 3, and the trace leaves the circle.
 
-4. **Observe and sketch**
-   For each configuration, observe the coupler curve shape and note whether any portion approximates a straight line.
-
-5. **Collect data**
+4. **Collect data**
    For each configuration, note the coupler curve shape (circle, ellipse, figure-eight, kidney, or other) and whether any segment is approximately straight. Save observations as `data/exp5_coupler.csv`.
 </Steps>
 
@@ -758,7 +758,7 @@ def solve_fourbar(a, b, c, d, e, theta2_deg):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca_val*dx/dist, Ay + ca_val*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
     return {'Ax': Ax, 'Ay': Ay, 'Bx': Bx, 'By': By}
 
 configs = [
@@ -812,18 +812,18 @@ plt.show()
 
 - Crank-rocker: oval or kidney-shaped coupler curve
 - Long coupler: more elongated curve, potentially with a near-straight segment
-- Parallelogram: perfect circle (because the coupler translates without rotating)
+- Parallelogram: half of a circle of radius $60\,\text{mm}$ for $\theta_2$ from $0$ to $180^\circ$ (the coupler translates without rotating), then a different curve where the simulator and the script continue on the antiparallelogram
 
 ### Design Question
 
-A packaging machine needs a mechanism that moves a part in an approximately straight line over a 50mm segment. Could you achieve this with a four-bar linkage? Which link proportions would you try, and how would you verify straightness from the coupler curve?
+A packaging machine needs a mechanism that moves a part in an approximately straight line over a $50\,\text{mm}$ segment. Could you achieve this with a four-bar linkage? Which link proportions would you try, and how would you verify straightness from the coupler curve?
 
 ## Experiment 6: Parametric Sensitivity
 
 <InArticleAd />
 
 
-When designing a four-bar linkage, you need to know which dimensions matter most. If manufacturing tolerance on the ground link is tight but the coupler can vary, do you care? This experiment quantifies how sensitive the follower oscillation range and minimum transmission angle are to each link length, giving you the data to set rational tolerances.
+No workshop cuts a bar to its exact length, and a tight tolerance costs money. So you need to know which length must be held closely and which may vary. This experiment changes one length at a time and measures how much the follower swing and the minimum transmission angle move, which is the data you need to set tolerances.
 
 :::note[Objective]
 Determine which link length has the strongest effect on follower oscillation and transmission angle, informing manufacturing tolerance decisions.
@@ -831,19 +831,19 @@ Determine which link length has the strongest effect on follower oscillation and
 
 <Steps>
 1. **Baseline**
-   Set a=40, b=120, c=80, d=100. Record follower oscillation and min transmission angle.
+   Set $a=40$, $b=120$, $c=80$, $d=100$. Record follower oscillation and min transmission angle.
 
-2. **Vary input crank (a)**
-   Change a to 30, 40, 50, 60 mm (keep b=120, c=80, d=100). Record for each.
+2. **Vary input crank ($a$)**
+   Change $a$ to $30$, $40$, $50$, $60\,\text{mm}$ (keep $b=120$, $c=80$, $d=100$). Record for each.
 
-3. **Vary coupler (b)**
-   Reset a=40. Change b to 100, 110, 120, 130, 140 mm. Record for each.
+3. **Vary coupler ($b$)**
+   Reset $a=40$. Change $b$ to $100$, $110$, $120$, $130$, $140\,\text{mm}$. Record for each.
 
-4. **Vary ground (d)**
-   Reset b=120. Change d to 80, 90, 100, 110, 120 mm. Record for each.
+4. **Vary ground ($d$)**
+   Reset $b=120$. Change $d$ to $80$, $90$, $100$, $110$, $120\,\text{mm}$. Record for each.
 
 5. **Collect data**
-   Save all measurements as `data/exp6_sensitivity.csv`. Alternatively, download the CSV from the simulator for each configuration.
+   For each setting, read Oscillation under the Follower $\theta_4$ chart and Min $\mu$ under the Transmission Angle chart. Save all measurements as `data/exp6_sensitivity.csv`.
 </Steps>
 
 ### Python Analysis
@@ -912,7 +912,7 @@ def get_oscillation(a, b, c, d, e=0):
         if hsq < 0: continue
         h = np.sqrt(hsq)
         mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-        Bx, By = mx + h*dy/dist, my - h*dx/dist
+        Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
         t4_arr.append(np.degrees(np.arctan2(By-e, Bx-d)))
     if len(t4_arr) < 10: return None
     return max(t4_arr) - min(t4_arr)
@@ -964,20 +964,20 @@ plt.show()
 
 ### Expected Results
 
-- Follower oscillation is most sensitive to input crank length (a): longer crank = wider oscillation
-- Coupler length (b) has moderate effect: longer coupler smooths the motion
-- Ground length (d) changes the Grashof classification boundary, causing abrupt behavior changes
+- Follower oscillation is most sensitive to input crank length ($a$): longer crank = wider oscillation ($53.7^\circ$, $73.8^\circ$, $97.3^\circ$ and $143.1^\circ$ for $a = 30$, $40$, $50$ and $60$)
+- Coupler length ($b$) has moderate effect: a longer coupler widens the oscillation ($64.7^\circ$ at $b=100$, $82.6^\circ$ at $b=130$) and lowers the minimum transmission angle ($36.9^\circ$ to $18.7^\circ$)
+- Ground length ($d$) works the other way: a longer ground narrows the oscillation ($84.7^\circ$ at $d=90$, $63.1^\circ$ at $d=120$). It also moves the Grashof boundary: $a=60$, $b=140$ and $d=80$ are each change-point cases ($s+l = p+q$), where the behavior changes abruptly
 
 ### Design Question
 
-Your mechanism has a=40mm with a manufacturing tolerance of plus or minus 1mm. At what nominal Grashof margin (p+q minus s+l) should you design to guarantee the mechanism always satisfies the Grashof condition despite tolerance variations?
+Your mechanism has $a=40\,\text{mm}$ with a manufacturing tolerance of $\pm 1\,\text{mm}$. At what nominal Grashof margin ($p+q$ minus $s+l$) should you design to guarantee the mechanism always satisfies the Grashof condition despite tolerance variations?
 
 ## Experiment 7: Angular Acceleration and Inertia Forces
 
 <InArticleAd />
 
 
-Angular acceleration determines the inertia torques on each link and the dynamic forces at the joints. High accelerations mean high bearing loads, vibration, and noise. In high-speed mechanisms (textile machines, printing presses), controlling angular acceleration is as important as controlling the position. This experiment reveals where the acceleration spikes occur and how link proportions control their magnitude.
+A linkage that runs quietly at $60\,\text{RPM}$ can break its bearings at $300\,\text{RPM}$ with the same geometry. The cause is angular acceleration, $\alpha$: how fast the angular velocity of a bar changes. To change the speed of a bar, the joints must apply a torque equal to its moment of inertia multiplied by $\alpha$, so a large $\alpha$ means large joint forces, vibration and noise. This experiment finds where $\alpha$ is largest and how it grows with speed.
 
 :::note[Objective]
 Map the angular acceleration profiles of the coupler and follower, identify the peak values, and understand how they relate to inertia forces in the mechanism.
@@ -985,32 +985,32 @@ Map the angular acceleration profiles of the coupler and follower, identify the 
 
 <Steps>
 1. **Baseline**
-   Use the crank-rocker preset (a=40, b=120, c=80, d=100, 60 RPM) with the assembly set to **Open**. Run the experiment, then open the &alpha;₃ and &alpha;₄ tabs. These plot angular acceleration directly, so this experiment is read off them rather than inferred from the velocity charts.
+   Use the crank-rocker preset ($a=40$, $b=120$, $c=80$, $d=100$, $60\,\text{RPM}$) with the assembly set to **Open**. Run the experiment. Where your simulator shows $\alpha_3$ and $\alpha_4$ tabs, they plot angular acceleration directly. Where it shows only the $\omega_3$ and $\omega_4$ tabs, use the script below for the acceleration curves and read the steepness of the $\omega_4$ curve by eye.
 
 2. **Find the reversals first**
-   On the &omega;₄ chart, note the two input angles where the follower angular velocity crosses zero: these are the ends of the rocker's swing, near 24&deg; and 231&deg;.
+   On the $\omega_4$ chart, note the two input angles where the follower angular velocity crosses zero: these are the ends of the rocker's swing, near $24^\circ$ and $231^\circ$.
 
 3. **Predict, then check**
-   Is the follower's angular acceleration largest at those reversal angles? Write down your answer before looking. Then read the &alpha;₄ chart and find where its peak actually sits.
+   Is the follower's angular acceleration largest at those reversal angles? Write down your answer before looking. Then find the crank angle where the $\omega_4$ curve is steepest, which is where $\lvert\alpha_4\rvert$ peaks.
 
 4. **Increase speed**
-   Change speed to 120 RPM. Run the experiment. Save as Experiment A. Then change back to 60 RPM and run, and compare the overlay on the &alpha;₄ chart.
+   Change speed to $120\,\text{RPM}$. Run the experiment. Save as Experiment A. Then change back to $60\,\text{RPM}$ and run, and compare the two curves: the faster one is twice as high on the $\omega_4$ chart and four times as high in $\alpha_4$.
 
 5. **Collect data**
-   Record the peak angular accelerations at both speeds, and the input angle at which each occurs. Save as `data/exp7_acceleration.csv`, or download the CSV from the simulator, where the columns are `Alpha3 (rad/s2)` and `Alpha4 (rad/s2)`.
+   Record the peak angular accelerations at both speeds, and the input angle at which each occurs. Save as `data/exp7_acceleration.csv`. In the CSV of the simulator the columns are `Alpha3 (rad/s2)` and `Alpha4 (rad/s2)`.
 </Steps>
 
 ### Data Collection Table
 
-| Configuration | Max &#124;&alpha;₃&#124; (rad/s²) | at &theta;₂ | Max &#124;&alpha;₄&#124; (rad/s²) | at &theta;₂ |
+| Configuration | Max $\lvert\alpha_3\rvert$ ($\text{rad/s}^2$) | at $\theta_2$ | Max $\lvert\alpha_4\rvert$ ($\text{rad/s}^2$) | at $\theta_2$ |
 |---------------|------------------|-------------|------------------|-------------|
 | 60 RPM | | | | |
 | 120 RPM | | | | |
 
 :::note[What the numbers should come to]
-At 60 RPM this linkage peaks at $\lvert\alpha_3\rvert = 38.2$ rad/s² (near $\theta_2 = 322\degree$) and $\lvert\alpha_4\rvert = 67.1$ rad/s² (near $\theta_2 = 8.5\degree$). At 120 RPM they become $152.7$ and $268.5$ rad/s², exactly four times as large.
+At $60\,\text{RPM}$ this linkage peaks at $\lvert\alpha_3\rvert = 38.2\,\text{rad/s}^2$ (near $\theta_2 = 322^\circ$) and $\lvert\alpha_4\rvert = 67.1\,\text{rad/s}^2$ (near $\theta_2 = 8.5^\circ$). At $120\,\text{RPM}$ they become $152.7$ and $268.5\,\text{rad/s}^2$, exactly four times as large.
 
-The peak of $\alpha_4$ does **not** sit at a reversal. The follower reverses at $\theta_2 \approx 24\degree$, where $\omega_4 = 0$, but $\lvert\alpha_4\rvert$ peaks earlier, near $8.5\degree$. Angular acceleration is the *slope* of the angular-velocity curve, so it is largest where $\omega_4$ falls most steeply, not where it happens to be zero. The two coincide only for a pure sinusoid, and a four-bar's output is not one.
+The peak of $\alpha_4$ does **not** sit at a reversal. The follower reverses at $\theta_2 \approx 24^\circ$, where $\omega_4 = 0$, but $\lvert\alpha_4\rvert$ peaks earlier, near $8.5^\circ$. Angular acceleration is the *slope* of the angular-velocity curve, so it is largest where $\omega_4$ falls most steeply, not where it happens to be zero. The two coincide only for a pure sinusoid, and a four-bar's output is not one.
 :::
 
 ### Python Analysis
@@ -1144,19 +1144,18 @@ print(f"Acceleration ratio should be 4x (quadratic)")
 
 - Follower angular velocity doubles when input speed doubles (linear relationship)
 - Angular acceleration quadruples when input speed doubles (quadratic, same as crank-slider)
-- Follower reversal points (omega4 = 0) occur at the same input angles regardless of speed
-- Peak |alpha4| does not sit at a reversal: it peaks where omega4 falls most steeply, near 8.5 deg, while the reversals are at 24 deg and 231 deg
+- Follower reversal points ($\omega_4 = 0$) occur at the same input angles regardless of speed
 
 ### Design Question
 
-A mechanism runs at 300 RPM. You measure that the follower angular acceleration causes a peak joint force of 500N at 60 RPM. What will the peak joint force be at 300 RPM? (Hint: inertia force scales with angular acceleration, which scales with omega squared.)
+A mechanism runs at $300\,\text{RPM}$. You measure that the follower angular acceleration causes a peak joint force of $500\,\text{N}$ at $60\,\text{RPM}$. What will the peak joint force be at $300\,\text{RPM}$? (Hint: inertia force scales with angular acceleration, which scales with $\omega^2$.)
 
 ## Experiment 8: Breaking the Mechanism
 
 <InArticleAd />
 
 
-Just as a crank-slider breaks when the rod is too short, a four-bar linkage breaks when the link lengths violate the closure condition. But unlike the crank-slider's simple constraint (l must be at least r + abs(e)), the four-bar has a more subtle failure: the mechanism can exist at some angles but not others, creating "dead zones" where the linkage locks. This experiment maps where those dead zones appear and how close to the boundary a working mechanism can get.
+A bar cut a few millimeters too long can make a working linkage jam, and only at some crank angles, so a quick test by hand may miss it. The loop can close only when the distance from joint A to pivot $O_4$ is no more than $b + c$ and no less than the difference between $b$ and $c$. Outside those limits the coupler and the follower cannot meet. This experiment maps the crank angles where that happens.
 
 :::note[Objective]
 Find the geometric constraints that determine whether a four-bar linkage can assemble, and observe partial-rotation failure modes.
@@ -1164,29 +1163,20 @@ Find the geometric constraints that determine whether a four-bar linkage can ass
 
 <Steps>
 1. **Working mechanism**
-   Set a=40, b=120, c=80, d=100. Run the experiment. All 361 data points should be valid.
+   Set $a=40$, $b=120$, $c=80$, $d=100$. Run the experiment. All 361 data points should be valid.
 
 2. **Increase the crank**
-   Change a=90. The sum s+l now exceeds p+q. Start the animation. At what angle does it stop?
+   Change $a=90$. The sum $s+l$ now exceeds $p+q$. Start the animation. At what angles does the message "Invalid configuration" appear?
 
 3. **Extreme case**
-   Set a=120, b=40, c=80, d=100. The "crank" is now longer than the coupler. Try to animate.
+   Set $a=120$, $b=40$, $c=80$, $d=100$. The "crank" is now longer than the coupler. Try to animate.
 
 4. **Triangle inequality**
-   Set a=200, b=30, c=30, d=100. No valid assembly exists at any angle because the links cannot form a closed chain.
+   Set $a=20$, $b=30$, $c=30$, $d=100$. No valid assembly exists at any angle because the links cannot form a closed chain: the longest link ($100$) is longer than the other three together ($20+30+30=80$).
 
 5. **Collect data**
-   For each configuration, record how many valid positions exist (out of 361) and the angles where the mechanism fails. Save as `data/exp8_breaking.csv`. Alternatively, download the CSV to see which rows have zero values.
+   For each configuration, record $s+l$, $p+q$ and the angles where the mechanism fails. The script below counts the valid positions out of 361 (one for each degree from $0$ to $360$). Save as `data/exp8_breaking.csv`.
 </Steps>
-
-### Data Collection Table
-
-| Configuration | Valid positions (out of 361) | Fails at angles? | s+l vs p+q |
-|---------------|-------|-----------------|------------|
-| a=40, b=120, c=80, d=100 | | | |
-| a=90, b=120, c=80, d=100 | | | |
-| a=120, b=40, c=80, d=100 | | | |
-| a=200, b=30, c=30, d=100 | | | |
 
 ### Python Analysis
 
@@ -1204,7 +1194,7 @@ csv_files = {
     (40, 120, 80, 100): 'data/exp8_working.csv',
     (90, 120, 80, 100): 'data/exp8_partial.csv',
     (120, 40, 80, 100): 'data/exp8_severe.csv',
-    (200, 30, 30, 100): 'data/exp8_impossible.csv',
+    (20, 30, 30, 100): 'data/exp8_impossible.csv',
 }
 
 print("Loading simulator CSVs...")
@@ -1234,7 +1224,7 @@ configs = [
     (40, 120, 80, 100),
     (90, 120, 80, 100),
     (120, 40, 80, 100),
-    (200, 30, 30, 100),
+    (20, 30, 30, 100),
 ]
 
 # ============================================================
@@ -1275,21 +1265,23 @@ plt.show()
 
 ### Expected Results
 
-- a=40: all 361 positions valid (Grashof, s+l=160 < p+q=180)
-- a=90: partial failure, mechanism locks at angles where the chain cannot close
-- a=120: severe failure, very few valid positions
-- a=200: no valid positions at all (links cannot reach each other)
+- $a=40$: all 361 positions valid (Grashof, $s+l=160 < p+q=180$)
+- $a=90$: partial failure (non-Grashof, $s+l=200 > p+q=190$). 313 of 361 positions are valid, and the chain cannot close within about $23.6^\circ$ of $\theta_2 = 0$
+- $a=120$: severe failure, only 94 of 361 positions valid, in two bands ($18.2^\circ$ to $65.4^\circ$ and $294.6^\circ$ to $341.8^\circ$). The sums still pass the Grashof test ($s+l=160 < p+q=180$), but the shortest link is now the coupler, so the input link can only rock
+- $a=20$: no valid positions at all (links cannot reach each other)
 
 ### Design Question
 
-What is the maximum input crank length that still allows full rotation if b=120, c=80, d=100? Calculate it from the Grashof condition and verify with the simulator.
+What is the maximum input crank length that still allows full rotation if $b=120$, $c=80$, $d=100$? Calculate it from the Grashof condition and verify with the simulator.
 
 ## Experiment 9: Ground Offset and Effective Ground Length
 
 <InArticleAd />
 
 
-Most textbooks analyze four-bar linkages with both fixed pivots on a horizontal line. Real machines rarely have that luxury: a motor mount bolted above the frame, a pivot relocated to clear a bearing housing, or a linkage designed into a non-planar chassis all introduce a vertical offset between the two ground pivots. This offset changes the effective ground length from d to sqrt(d^2 + e^2), which shifts the Grashof classification, alters the transmission angle profile, and reshapes the coupler curve. The simulator's ground offset slider lets you explore this continuously, something no other free online tool offers.
+Textbook four-bars have both fixed pivots on a horizontal line. Real machines often cannot: a motor mount sits above the frame, or a pivot is moved to clear a bearing housing. Then one pivot is higher than the other by an offset $e$, and a design that was checked for $e = 0$ may no longer behave as planned.
+
+The distance between the pivots is the long side of a right triangle with sides $d$ and $e$, so the effective ground length grows from $d$ to $\sqrt{d^2 + e^2}$. That changes the Grashof sums, the transmission angle and the coupler curve. The ground offset slider of the simulator lets you see by how much.
 
 :::note[Objective]
 Quantify how vertical ground offset changes the effective ground length, Grashof classification, follower oscillation, and transmission angle quality for the same set of link lengths.
@@ -1297,36 +1289,36 @@ Quantify how vertical ground offset changes the effective ground length, Grashof
 
 <Steps>
 1. **Baseline with zero offset**
-   Set a=40, b=120, c=80, d=100, e=0. Run the experiment. Record the Grashof type, valid positions (361/361), follower oscillation range, and min transmission angle. Download the CSV.
+   Set $a=40$, $b=120$, $c=80$, $d=100$, $e=0$. Run the experiment. Record the Grashof type, follower oscillation range, and min transmission angle.
 
 2. **Small offset**
-   Set e=20. The effective ground length is now sqrt(100^2 + 20^2) = 101.98 mm. The mechanism is still Grashof, but the follower oscillation and transmission angle have shifted. Run and record.
+   Set $e=20$. The effective ground length is now $\sqrt{100^2 + 20^2} = 101.98\,\text{mm}$. The mechanism is still Grashof, but the follower oscillation and transmission angle have shifted. Run and record.
 
 3. **Moderate offset**
-   Set e=40. Effective ground = sqrt(100^2 + 40^2) = 107.7 mm. Run and record. Does the Grashof type change?
+   Set $e=40$. Effective ground $= \sqrt{100^2 + 40^2} = 107.7\,\text{mm}$. Run and record. Does the Grashof type change?
 
 4. **Critical offset**
-   Set e=50. Effective ground = sqrt(100^2 + 50^2) = 111.8 mm. Now s+l = 40+120 = 160, and p+q = 80+111.8 = 191.8. Still Grashof, but the margin is smaller. Compare with e=0.
+   Set $e=50$. Effective ground $= \sqrt{100^2 + 50^2} = 111.8\,\text{mm}$. Now $s+l = 40+120 = 160$, and $p+q = 80+111.8 = 191.8$. Still Grashof, and the margin has grown from $20$ to $31.8\,\text{mm}$. Compare with $e=0$.
 
 5. **Large offset (classification flip)**
-   Try e values beyond 50 (e.g., e=60, 70). At some point, the effective ground length makes the link proportions non-Grashof. Find the exact offset where the mechanism stops completing a full rotation.
+   The offset slider stops at $e=50$, and the linkage is still a crank-rocker there. The classification flips only when $s+l = 40 + D$ passes $p+q = 120+80 = 200$, at $D = 160\,\text{mm}$ or $e = \sqrt{160^2 - 100^2} = 124.9\,\text{mm}$. Use the Python script below to confirm it.
 
 6. **Negative offset**
-   Set e=-30. The effective ground length is the same as e=+30, but the mechanism geometry is mirrored vertically. Run and compare the follower angle profile with e=+30. Are they symmetric?
+   Run $e=+30$ and save it as Experiment A. Then set $e=-30$ and run. The effective ground length is the same ($104.4\,\text{mm}$), but the ground line now tilts down by $16.7^\circ$ instead of up. On the Follower $\theta_4$ chart, decide whether the two curves are identical, mirrored or shifted.
 
 7. **Collect data**
-   For each offset value, record the effective ground D, Grashof type, valid positions, follower oscillation, and min transmission angle. Save as `data/exp9_offset.csv`. Download the CSV from the simulator for at least the baseline and the critical offset case.
+   For each offset value, record the effective ground $D$, Grashof type, follower oscillation, and min transmission angle. The script prints the valid positions. Save as `data/exp9_offset.csv`.
 </Steps>
 
 ### Data Collection Table
 
-| Offset e (mm) | Effective D (mm) | s+l | p+q | Grashof? | Valid positions | Follower oscillation | Min mu |
+| Offset $e$ ($\text{mm}$) | Effective $D$ ($\text{mm}$) | $s+l$ | $p+q$ | Grashof? | Valid positions | Follower oscillation | Min $\mu$ |
 |---------------|-----------------|-----|-----|----------|----------------|---------------------|--------|
 | 0 | 100.0 | | | | | | |
 | 20 | 102.0 | | | | | | |
 | 40 | 107.7 | | | | | | |
 | 50 | 111.8 | | | | | | |
-| 60 | 116.6 | | | | | | |
+| 60 (script only) | 116.6 | | | | | | |
 | -30 | 104.4 | | | | | | |
 
 ### Python Analysis
@@ -1372,7 +1364,7 @@ def solve_fourbar(a, b, c, d, e, theta2_deg):
     if hsq < 0: return None
     h = np.sqrt(hsq)
     mx, my = Ax + ca*dx/dist, Ay + ca*dy/dist
-    Bx, By = mx + h*dy/dist, my - h*dx/dist
+    Bx, By = mx - h*dy/dist, my + h*dx/dist  # open circuit, as in the simulator
     t3 = np.degrees(np.arctan2(By-Ay, Bx-Ax))
     t4 = np.degrees(np.arctan2(By-e, Bx-d))
     mu = abs(t3 - t4)
@@ -1439,7 +1431,7 @@ axes[0,1].set_title('Transmission Angle vs Ground Offset')
 axes[0,1].legend(fontsize=8)
 
 # Bottom left: Grashof margin vs offset (continuous sweep)
-e_sweep = np.linspace(0, 80, 200)
+e_sweep = np.linspace(0, 140, 281)
 margins = []
 valid_counts = []
 for e_val in e_sweep:
@@ -1500,20 +1492,16 @@ for i, m in enumerate(margins):
 
 ### Expected Results
 
-- At e=0, the crank-rocker works at all 361 positions with a Grashof margin of 20 mm
-- As offset increases, the effective ground D grows, gradually consuming the Grashof margin
-- The Grashof boundary is crossed when D reaches the value where s+l = p+q. For a=40, b=120, c=80, d=100, this occurs when D makes the sorted link sums equal
-- Follower oscillation range changes with offset: the mechanism "sees" a different ground geometry
-- The transmission angle minimum shifts and may drop below 40 degrees at high offsets
-- Positive and negative offsets of the same magnitude produce the same effective ground length but mirror the follower angle profile vertically
+- At $e=0$, the crank-rocker works at all 361 positions with a Grashof margin of $20\,\text{mm}$
+- As offset increases, the effective ground $D$ grows. While $D$ is below $120\,\text{mm}$ the coupler is still the longest link, so the margin $p+q-s-l = D - 80$ grows too: $22.0\,\text{mm}$ at $e=20$, $27.7\,\text{mm}$ at $e=40$ and $31.8\,\text{mm}$ at $e=50$
+- The margin peaks at $40\,\text{mm}$ when $D = 120\,\text{mm}$ ($e = 66.3\,\text{mm}$). Beyond that the ground is the longest link and the margin falls as $160 - D$. The Grashof boundary ($s+l = p+q$) is crossed at $D = 160\,\text{mm}$, which is $e = 124.9\,\text{mm}$ for $a=40$, $b=120$, $c=80$, $d=100$. The slider range ($\pm 50\,\text{mm}$) never reaches it, so the simulator shows a crank-rocker with 361 valid positions at every offset
+- Follower oscillation narrows with offset: $73.8^\circ$ at $e=0$, $72.2^\circ$ at $e=20$, $68.5^\circ$ at $e=40$ and $66.3^\circ$ at $e=50$
+- The transmission angle minimum improves with offset: $26.4^\circ$ at $e=0$, $28.0^\circ$ at $e=20$, $32.4^\circ$ at $e=40$ and $35.4^\circ$ at $e=50$. It stays below $40^\circ$ over the whole slider range
+- Offsets of $+30$ and $-30$ give the same effective ground length, oscillation and minimum transmission angle. The follower angle curve keeps its shape but is shifted, not mirrored: $\theta_4$ runs from $76.9^\circ$ to $147.4^\circ$ at $e=+30$ and from $43.5^\circ$ to $114.0^\circ$ at $e=-30$, a shift of $33.4^\circ$ (twice the ground tilt of $16.7^\circ$), with the same shift along the input angle axis
 
 ### Design Question
 
-Your mechanism mounts on a frame where the output pivot must be 25mm above the input pivot (e=25). Using a=40, b=120, c=80, d=100, does the mechanism still satisfy the Grashof condition? What is the new minimum transmission angle? If it falls below 40 degrees, what link length adjustment would you make to restore acceptable transmission quality while keeping the same follower oscillation range?
-
-### Challenge: Asymmetry of Positive vs Negative Offset
-
-Using the A/B comparison feature, save e=+30 as Experiment A, then run e=-30 as Experiment B. Overlay the follower angle plots. The effective ground length is the same (104.4 mm), but are the profiles identical, mirrored, or different? Explain why based on the geometry: when the output pivot moves up vs down, the mechanism "wraps" differently around the ground link.
+Your mechanism mounts on a frame where the output pivot must be $25\,\text{mm}$ above the input pivot ($e=25$). Using $a=40$, $b=120$, $c=80$, $d=100$, does the mechanism still satisfy the Grashof condition? What is the new minimum transmission angle? If it falls below $40^\circ$, what link length adjustment would you make to restore acceptable transmission quality while keeping the same follower oscillation range?
 
 ## Writing Your Lab Report
 
@@ -1528,9 +1516,7 @@ After completing all experiments, compile your findings:
 4. Compare predictions with simulator results and discuss discrepancies
 5. Answer the design questions with specific data references
 
-The simulator also includes a downloadable report template and design specification in the downloads section.
-
-For a complete discussion of the simulator's capabilities, see the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page.
+The downloads section of the simulator also offers a report template and a design specification.
 
 <MechanismDesignSimulationComments />
 

@@ -25,40 +25,49 @@ import { Card, CardGrid, Badge, Steps, LinkButton, FileTree } from '@astrojs/sta
 
 import MechanismDesignSimulationComments from '../../../../components/mechanism-design-simulation/MechanismDesignSimulationComments.astro';
 
-A cam looks like the simplest mechanism there is: a shaped disk that pushes a follower up and down. The catch is that the displacement you draw is the least important thing about it. Run the cam fast and the machine's life is decided by the second and third derivatives of that curve, the acceleration and the jerk, which you never see by looking at the shape. These six experiments train the habit every cam designer needs: design the motion by its derivatives, let the fundamental law throw out the profiles that secretly misbehave, and only then check the geometry the profile forces on the cam. #CamDesign #SVAJ #MechanismDesign
+A cam that feels smooth when you turn it by hand can hammer, wear quickly and throw its follower off at full speed. The lift curve on the drawing looks perfect in both cases. The damage is decided by two things that the lift curve hides: the acceleration of the follower, which sets the force, and the jerk, which is how suddenly that force changes. In these six experiments you learn to judge a cam by those curves first, then to check that the cam is large enough to work, and last to find the speed at which the follower leaves the cam. #CamDesign #SVAJ #MechanismDesign
 
 :::tip[What you need]
 The [Cam and Follower Mechanism Simulator](/product-development/cam-follower-mechanism-simulator/), and Python 3 with NumPy and Matplotlib for the analysis scripts (`pip install numpy matplotlib`).
 :::
 
 :::note[Related resources]
-Model the cam parametrically in the [FreeCAD Cam and Follower lesson](/education/parametric-mechanical-cad-freecad/cam-and-follower-mechanism), see the full tool set on the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page, and try the companion [Toggle Clamp Experiments](/education/mechanism-design-simulation/toggle-clamp-experiments) for an over-centre force study.
+Model the cam parametrically in the [FreeCAD Cam and Follower lesson](/education/parametric-mechanical-cad-freecad/cam-and-follower-mechanism/), see the full tool set on the [2D Mechanisms Analyzer](/product-development/2d-mechanisms-analyzer/) page, and try the [Toggle Clamp Experiments](/education/mechanism-design-simulation/toggle-clamp-experiments/).
 :::
+
+## The cam and follower in brief
+
+A cam is a disk with a shaped edge, fixed on a turning shaft. A follower rests on that edge, held there by a spring, and moves up and down as the shape passes under it. In a car engine a cam opens each valve at the right moment. Cams also time sewing machines and packaging machines.
+
+The designer first draws the motion of the follower during one turn, and the cam shape follows from it. The motion is built from three kinds of segment: a rise, a fall, and a dwell, where the follower stays still.
+
+```text
+ lift s
+   |             _______________
+ h |            /   top dwell   \
+   |      rise /                 \ fall
+   |          /                   \
+ 0 |_________/                     \_________
+   +-----------------------------------------
+   0        45        135       225       315  360
+              cam angle, degrees
+```
+
+The experiments answer three questions. Which curve should the rise and the fall follow? How large must the cam be? How fast may it run before the follower leaves it?
 
 ## Reference
 
 | Term | Meaning |
 |------|---------|
-| **SVAJ** | Displacement s, velocity v = ds/dθ, acceleration a = d²s/dθ², jerk j = d³s/dθ³, the four curves that define a cam |
-| **Fundamental law** | The displacement must be continuous through velocity and acceleration over the full 360°, with finite jerk; otherwise vibration is built in |
-| **Profile** | The rise or fall law (cycloidal, polynomial, simple harmonic, etc.) that shapes one segment of the motion |
-| **Cv, Ca, Cj** | Dimensionless peak coefficients: v_peak = Cv·h/β, a_peak = Ca·h·ω²/β², j_peak = Cj·h·ω³/β³ |
-| **Pressure angle (α)** | Angle between the follower motion and the cam contact force; kept below about 30° for a translating follower so it does not jam |
-| **Base / prime circle** | Base-circle radius rb is the smallest cam radius; prime-circle radius Rp = rb + rr is the roller-centre circle |
-| **Radius of curvature (ρ)** | Local curvature of the pitch curve; a roller undercuts the cam when ρ drops below the roller radius |
+| **SVAJ** | The four curves that define a cam: displacement $s$, velocity $v$ (how fast $s$ changes), acceleration $a$ (how fast $v$ changes) and jerk $j$ (how fast $a$ changes) |
+| **Fundamental law** | Over the full $360^\circ$ the velocity and the acceleration must have no sudden step, so that the jerk stays finite; otherwise vibration is built in |
+| **Profile** | The rule (cycloidal, polynomial, simple harmonic and others) that shapes one rise or fall |
+| **$h$, $\beta$, $\omega$** | Lift (mm), the cam angle used by one rise or fall (radians), and the cam speed ($\text{rad/s}$) |
+| **$C_v$, $C_a$, $C_j$** | Peak coefficients, pure numbers that belong to a profile: $v_{\text{peak}} = C_v\,h\,\omega/\beta$, $a_{\text{peak}} = C_a\,h\,\omega^2/\beta^2$, $j_{\text{peak}} = C_j\,h\,\omega^3/\beta^3$ |
+| **Pressure angle ($\alpha$)** | Angle between the direction the follower moves and the direction the cam pushes it; kept below about $30^\circ$ for a translating follower so it does not jam |
+| **Base / prime circle** | Base-circle radius $r_b$ is the smallest cam radius; prime-circle radius $R_p = r_b + r_r$ (with $r_r$ the roller radius) is the circle of the roller centre |
+| **Pitch curve, radius of curvature ($\rho$)** | The pitch curve is the path of the roller centre around the cam. $\rho$ is the radius of the circle that fits the curve at one point: small where the bend is tight. A roller undercuts the cam when $\rho$ drops below the roller radius |
 | **Follower jump** | At high speed the inertia force overcomes the spring and the follower loses contact with the cam |
-
-### Experiment Workflow
-
-```mermaid
-flowchart TD
-    A[Choose a motion profile] --> B[Configure Simulator]
-    B --> C[Read SVAJ Charts]
-    C --> D[Check Geometry: alpha and rho]
-    D --> E[Record in CSV]
-    E --> F[Run Python Script]
-    F --> G[Compare and Decide]
-```
 
 ### Workspace Setup
 
@@ -80,7 +89,9 @@ The classic high-speed cam failures are follower jump (loss of contact) and surf
 <InArticleAd />
 
 
-Two cams can produce the exact same lift over the exact same angle and yet one runs silently at speed while the other hammers itself to pieces. The difference never shows in the displacement curve; it shows in the acceleration. This experiment plots the full SVAJ chain for three rise profiles and makes the fundamental law of cam design visible: where the acceleration jumps, the jerk goes infinite, and the cam will vibrate.
+Two cams can give the same lift over the same angle, and one runs silently at speed while the other hammers until it fails. The displacement curves look the same. The difference is in the acceleration. The force on the follower is its mass multiplied by its acceleration, so a sudden step in acceleration is a sudden step in force: a hammer blow, once every turn. At such a step the jerk has no upper limit.
+
+This experiment plots all four curves for four rise profiles and shows the fundamental law of cam design at work: where the acceleration steps, the cam will vibrate.
 
 :::note[Objective]
 Plot displacement, velocity, acceleration, and jerk for a constant-velocity, a constant-acceleration, a simple-harmonic, and a cycloidal rise, and identify which obey the fundamental law (continuous acceleration, finite jerk) and which do not.
@@ -91,13 +102,13 @@ Plot displacement, velocity, acceleration, and jerk for a constant-velocity, a c
    Open the simulator and select the Textbook double-dwell preset. In the Motion program panel set the rise profile to Cycloidal. Open the Acceleration and Jerk charts.
 
 2. **Predict**
-   The fundamental law says the acceleration must be continuous through the segment boundaries. Predict that cycloidal (acceleration zero at both ends) joins the dwells smoothly, while simple harmonic (acceleration non-zero at the ends) jumps where the rise meets a dwell.
+   On a dwell the acceleration is zero. Predict which profiles join the dwells with no step: cycloidal (acceleration zero at both ends) or simple harmonic (acceleration not zero at the ends).
 
 3. **Sweep the profiles**
-   Change the rise profile to Constant velocity, then Constant acceleration, then Simple harmonic, then Cycloidal. Each time, watch the Acceleration chart for a vertical step at a segment boundary and read the peak acceleration from the summary.
+   Change the rise profile to Constant velocity, then Constant acceleration, then Simple harmonic, then Cycloidal. Each time, look on the Acceleration chart for a vertical step where the rise meets a dwell: that step is the hammer blow.
 
-4. **Find the law-breakers**
-   Note which profiles flag "VIOLATES" in the acceleration summary. Read the peak acceleration for each profile from the summary panel.
+4. **Find the profiles that break the law**
+   Note which profiles show "VIOLATES" in the acceleration summary. Read the peak acceleration for each profile from the summary panel.
 
 5. **Save data**
    Create `data/exp1_svaj.csv` with columns: profile, peak_accel_sim, obeys_law (1 or 0).
@@ -105,7 +116,7 @@ Plot displacement, velocity, acceleration, and jerk for a constant-velocity, a c
 
 ### Data Collection Table
 
-| Profile | Peak acceleration (mm/s²) | Obeys law? |
+| Profile | Peak acceleration ($\text{mm/s}^2$) | Obeys law? |
 |---------|---------------------------|------------|
 | Constant velocity | | |
 | Constant acceleration | | |
@@ -202,10 +213,12 @@ A colleague says their cam "moves smoothly, I checked the displacement curve and
 <InArticleAd />
 
 
-Once you keep only the profiles that obey the fundamental law, you still have to choose between them, and they are not equal. A cycloidal rise is the gentlest on jerk but demands the highest peak acceleration (and therefore the largest inertia force); a modified trapezoid minimizes peak acceleration but pays for it in jerk. This experiment puts the law-abiding profiles head to head using the dimensionless coefficients engineers actually compare.
+The profiles that obey the fundamental law are not equal, and the wrong choice costs either a stronger spring and heavier bearings or more vibration. A cycloidal rise has the lowest jerk but a high peak acceleration, and so a large inertia force. A modified trapezoid has the lowest peak acceleration but more jerk.
+
+Engineers compare profiles by their peak coefficients. The peak acceleration is $C_a$ multiplied by the lift and by the square of the cam speed, and divided by the square of the rise angle. The lift, the speed and the angle belong to the job. Only $C_a$ belongs to the profile.
 
 :::note[Objective]
-Measure the dimensionless peak coefficients Cv, Ca, and Cj for the main motion profiles, and decide which profile minimizes peak acceleration and which minimizes jerk.
+Measure the dimensionless peak coefficients $C_v$, $C_a$, and $C_j$ for the main motion profiles, and decide which profile minimizes peak acceleration and which minimizes jerk.
 :::
 
 <Steps>
@@ -213,13 +226,13 @@ Measure the dimensionless peak coefficients Cv, Ca, and Cj for the main motion p
    Select the High-speed precision preset (cycloidal rise). Keep the lift, rise angle, and speed fixed so only the profile changes.
 
 2. **Predict**
-   Peak acceleration scales with Ca and peak jerk with Cj. Predict that cycloidal gives the largest peak acceleration among the smooth profiles, while modified trapezoid gives the smallest.
+   Peak acceleration scales with $C_a$ and peak jerk with $C_j$. Predict that the 4-5-6-7 polynomial gives the largest peak acceleration among the smooth profiles, with cycloidal next, while modified trapezoid gives the smallest.
 
 3. **Sweep the smooth profiles**
    Set the rise profile in turn to Cycloidal, Modified trapezoid, Modified sine, 3-4-5 polynomial, and 4-5-6-7 polynomial. At each, read the peak acceleration from the summary (lift, rise angle, and speed held constant).
 
 4. **Back out the coefficient**
-   The coefficient is Ca = a_peak · β² / (h · ω²). Compute it for each profile and compare with the table below.
+   The coefficient is $C_a = a_{\text{peak}}\,\beta^2 / (h\,\omega^2)$, with $\beta$ in radians and $\omega$ in $\text{rad/s}$. Compute it for each profile and compare with the table below.
 
 5. **Save data**
    Create `data/exp2_profiles.csv` with columns: profile, peak_accel_sim_mm_s2.
@@ -227,7 +240,7 @@ Measure the dimensionless peak coefficients Cv, Ca, and Cj for the main motion p
 
 ### Data Collection Table
 
-| Profile | Peak accel (mm/s²) | Back-calculated Ca |
+| Profile | Peak accel ($\text{mm/s}^2$) | Back-calculated $C_a$ |
 |---------|--------------------|--------------------|
 | Cycloidal | | |
 | Modified trapezoid | | |
@@ -316,14 +329,14 @@ print(f"Lowest peak jerk:         {best_j}")
 
 ### Expected Results
 
-- The coefficients come out close to the textbook values: cycloidal Cv 2.00, Ca 6.28, Cj 39.5; modified trapezoid Ca about 4.89; modified sine Ca about 5.53; 3-4-5 Ca about 5.77; 4-5-6-7 Ca about 7.51
+- The coefficients come out close to the textbook values: cycloidal $C_v = 2.00$, $C_a = 6.28$, $C_j = 39.5$; modified trapezoid $C_a \approx 4.89$; modified sine $C_a \approx 5.53$; 3-4-5 $C_a \approx 5.77$; 4-5-6-7 $C_a \approx 7.51$
 - Modified trapezoid has the lowest peak acceleration of the group, so it produces the smallest inertia force at a given speed
-- Cycloidal has the lowest peak jerk of the classical profiles, so it is the smoothest, at the cost of the highest peak acceleration among them
-- The back-calculated Ca from your simulator readings matches these to within reading error
+- Cycloidal has the lowest peak jerk of the classical profiles, so it is the smoothest, at the cost of a high peak acceleration (only the 4-5-6-7 polynomial is higher)
+- The back-calculated $C_a$ from your simulator readings matches these to within reading error
 
 ### Design Question
 
-For a high-speed cam where the spring must hold the follower against the inertia force, would you favour the profile with the lowest Ca or the lowest Cj, and why? When would the answer flip?
+For a high-speed cam where the spring must hold the follower against the inertia force, would you favour the profile with the lowest $C_a$ or the lowest $C_j$, and why? When would the answer flip?
 
 ---
 
@@ -332,7 +345,9 @@ For a high-speed cam where the spring must hold the follower against the inertia
 <InArticleAd />
 
 
-You have chosen a good motion profile, but you cannot pick the cam's size freely: make the base circle too small and the pressure angle climbs until the follower jams in its guide instead of moving. The pressure angle is the first thing that sets the minimum cam size. This experiment maps it, finds where it crosses the 30-degree limit, and uses follower offset to buy some of it back on the rise.
+A small cam saves space and money, but a cam that is too small jams its follower. The cam pushes at a right angle to its own surface, and on a rise that surface is tilted, so the push is not straight along the travel of the follower. The pressure angle is the angle between the push and the travel. The larger it is, the harder the follower stem is pressed sideways against its guide, and above about 30 degrees the friction there can stop it.
+
+A larger base circle makes the same lift a gentler slope. This experiment finds the smallest base circle that stays under 30 degrees, and shows how a follower offset lowers the angle on the rise.
 
 :::note[Objective]
 Measure how the maximum pressure angle depends on the base-circle radius, find the smallest base circle that keeps it under 30 degrees, and quantify how follower offset reduces the pressure angle on the rise.
@@ -465,7 +480,7 @@ You are tempted to fix a high pressure angle by simply enlarging the base circle
 <InArticleAd />
 
 
-The pressure angle is only the first geometric limit. The second is sharper: if the roller is larger than the tightest curve on the cam, the cutter literally removes the metal that was supposed to carry the follower, and the designed motion is destroyed. This is undercutting, and a cam can be geometrically impossible no matter how good its motion law. This experiment finds the minimum radius of curvature and triggers an undercut on purpose.
+A cam can pass the pressure angle check and still be impossible to make. The roller centre must follow the pitch curve. Where that curve bends more tightly than the roller's own radius, the cutter that makes the cam removes metal that was meant to carry the follower, and the designed motion is lost. This is undercutting. A common workshop rule, the golden rule, keeps the smallest radius of curvature at 2 to 3 times the roller radius. This experiment finds that smallest radius and causes an undercut on purpose.
 
 :::note[Objective]
 Measure the minimum radius of curvature of the pitch curve, apply the 2-to-3 times golden rule against the roller radius, force an undercut by combining a tight base circle with a large roller, and see why a flat-face follower cannot follow a concave profile.
@@ -490,11 +505,11 @@ Measure the minimum radius of curvature of the pitch curve, apply the 2-to-3 tim
 
 ### Data Collection Table
 
-| Base radius (mm) | Roller radius (mm) | ρ_min (mm) | Undercut? |
-|------------------|--------------------|-----------|-----------|
-| 45 | 8 | | |
-| 25 | 12 | | |
-| 16 | 16 | | |
+| Base radius (mm) | Roller radius (mm) | Lift (mm), rise (deg) | $\rho_{\min}$ (mm) | Undercut? |
+|------------------|--------------------|------------|-----------|-----------|
+| 45 | 8 | 20, 110 | | |
+| 25 | 12 | 30, 70 | | |
+| 16 | 16 | 35, 50 | | |
 
 ### Python Analysis
 
@@ -576,10 +591,9 @@ print("at or above about 2.5 so the cam is comfortably manufacturable, not just 
 
 ### Expected Results
 
-- For a generous cam (large base, small roller, gentle rise) the minimum radius of curvature is several times the roller radius, well above the 2.5 golden rule
 - Shrinking the base circle, enlarging the roller, and shortening the rise together drive the ratio down through the marginal band and below a ratio of 1, where the summary reads UNDERCUT and the cam contour shows a cusp
 - A flat-face follower fails differently: it cannot follow any concave part of the profile, so an aggressive lift on a small base trips a concave-profile warning even though there is no roller to undercut
-- Your three table rows should bracket the transition from OK through marginal to undercut
+- The script gives $\rho_{\min}$ of 48.0, 24.0 and 15.0 mm for the three table rows: ratios of 6.00 (OK), 2.00 (marginal) and 0.94 (undercut)
 
 ### Design Question
 
@@ -592,7 +606,9 @@ You discover your cam undercuts. List three independent changes that each remove
 <InArticleAd />
 
 
-Everything so far has been geometry, independent of speed. Dynamics is where speed bites. The cam can only push the follower; it cannot pull. The return spring is what keeps the follower pressed against the cam, and at some speed the follower's own inertia, trying to fly off the top of the rise, overwhelms the spring. The follower jumps, slams back down, and the motion you so carefully designed is gone. This experiment finds that jump speed.
+So far everything was geometry, the same at any speed. The cam can only push the follower; it cannot pull. Near the top of the rise the follower must slow down, and only the return spring can slow it. Above a certain speed the spring is too weak. The follower leaves the cam, falls back and strikes it. This experiment finds that jump speed.
+
+The force between cam and follower is the spring preload, plus the spring rate multiplied by the lift, plus the follower mass multiplied by its acceleration. While the follower slows down, the last term is negative. The follower jumps when the total reaches zero.
 
 :::note[Objective]
 Find the cam speed at which the follower loses contact (the contact force reaches zero), and show how spring preload, spring rate, and the motion profile each move the jump speed.
@@ -603,7 +619,7 @@ Find the cam speed at which the follower loses contact (the contact force reache
    Select the High-speed precision preset (cycloidal). Open the Cam contact force chart, which shows the zero line where the follower separates.
 
 2. **Predict**
-   Contact is lost where the inertia force (mass times the peak time-domain deceleration) exceeds the spring force. Predict that raising the cam speed lowers the minimum contact force toward zero.
+   The acceleration in time grows with the square of the cam speed, and the spring force does not grow at all. Predict that raising the cam speed lowers the minimum contact force toward zero.
 
 3. **Raise the speed**
    Increase the cam speed in steps and watch the contact-force curve dip. Record the speed at which the minimum contact force first touches zero (the summary reports a jump speed).
@@ -704,9 +720,8 @@ print("More preload (or rate) raises the jump speed; a higher-acceleration profi
 ### Expected Results
 
 - As the cam speed rises the contact-force curve dips, with its lowest point near the peak deceleration at the top of the rise and the start of the fall
-- The follower jumps when that minimum reaches zero; for the high-speed preset this is in the low thousands of rpm
-- Raising the spring preload or rate raises the jump speed; a profile with a higher peak acceleration (larger Ca) lowers it, which is exactly why low-Ca profiles matter at speed
-- The simulator's reported jump speed agrees with the speed at which your contact-force curve first touches zero
+- The follower jumps when that minimum reaches zero; for the high-speed preset this is in the low thousands of rpm. The follower of the script (0.3 kg, 25,000 N/m, 20 mm lift in 100 degrees) jumps at about 1900, 1980 and 2100 rpm with 40, 80 and 150 N of preload
+- Raising the spring preload or rate raises the jump speed; a profile with a higher peak acceleration (larger $C_a$) lowers it, which is why low-$C_a$ profiles matter at speed
 
 ### Design Question
 
@@ -719,7 +734,7 @@ Your cam must run 30 percent faster than its current jump speed. You can stiffen
 <InArticleAd />
 
 
-The previous five experiments were analysis: given a cam, find its behaviour. Real design is the inverse and it is constrained from every side at once. This experiment hands you a specification and asks you to choose a profile and a cam size that satisfies the motion, the pressure angle, the curvature, and the dynamics together, then verify it in the simulator.
+The first five experiments were analysis: given a cam, find how it behaves. A customer gives you the opposite: a lift, a timing and a speed, and asks for a cam. A choice that helps one limit often harms another, so all the checks must pass together. This experiment asks for a profile and a cam size that satisfy the motion, the pressure angle, the curvature and the dynamics at once.
 
 :::note[Objective]
 Given a required lift, timing, and speed, choose a motion profile and a base-circle radius that keep the pressure angle under 30 degrees, avoid undercutting by the golden rule, and stay below the follower-jump speed, then verify the design with the A/B comparison.
@@ -744,7 +759,7 @@ Given a required lift, timing, and speed, choose a motion profile and a base-cir
 
 ### Data Collection Table
 
-| Profile | Base radius (mm) | α_max (deg) | ρ ratio | Jump speed (rpm) |
+| Profile | Base radius (mm) | $\alpha_{\max}$ (deg) | $\rho$ ratio | Jump speed (rpm) |
 |---------|------------------|-------------|---------|------------------|
 | Modified trapezoid | | | | |
 | Cycloidal | | | | |
@@ -804,6 +819,15 @@ def svaj_at(name, theta_deg):
         start += dur
     return lift, 0.0, 0.0
 
+def jump_rpm(name):
+    # smallest speed at which the contact force reaches zero somewhere in the cycle
+    sa = [svaj_at(name, th) for th in np.arange(0, 360, 0.5)]
+    for n_rpm in range(600, 6000, 10):
+        w = n_rpm*2*np.pi/60.0
+        if min((F0 + k*s*1e-3) + m*(a*w**2*1e-3) for s, _, a in sa) <= 0:
+            return n_rpm
+    return None
+
 def evaluate(name, base_radius):
     Rp = base_radius + rr
     thetas = np.arange(0, 360, 0.5)
@@ -829,14 +853,15 @@ for name in ['mod-trap', 'cycloidal']:
         ok = (amax <= ALPHA_MAX) and (ratio >= GOLDEN) and (fmin > 0)
         print(f"  rb={rb:2d} mm: alpha_max={amax:4.1f} deg, rho ratio={ratio:4.1f}, "
               f"min contact={fmin:6.0f} N  -> {'MEETS SPEC' if ok else 'no'}")
+    print(f"  jump speed with this spring: about {jump_rpm(name)} rpm")
 print("\nPick the smallest base radius that meets every constraint with margin.")
 ```
 
 ### Expected Results
 
 - Both profiles can meet the specification at a large enough base circle; the question is the smallest cam that satisfies every constraint at once
-- The pressure angle constraint usually sets the minimum base radius (around 30 to 35 mm for this specification), while the curvature ratio is satisfied once the base circle is large enough
-- The modified trapezoid keeps the minimum contact force higher at 600 rpm than cycloidal does, because its peak acceleration is lower, so it has more margin against follower jump
+- The pressure angle constraint usually sets the minimum base radius (about 28 to 30 mm for this specification: 25 mm gives about 32 degrees, 30 mm gives about 29 degrees), while the curvature ratio is satisfied once the base circle is large enough
+- At 600 rpm both profiles keep the contact force at or above the 120 N preload, so neither jumps; the modified trapezoid has more margin because its peak acceleration is lower (about $178\ \text{m/s}^2$ against $229\ \text{m/s}^2$), which puts its jump speed near 1390 rpm against about 1320 rpm for cycloidal
 - A workable answer is a modified-trapezoid rise on a base circle around 30 to 35 mm with enough spring preload that the contact force stays positive throughout
 
 ### Design Question
