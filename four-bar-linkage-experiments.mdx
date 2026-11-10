@@ -108,9 +108,7 @@ The real question on a four-bar is whether it traces the motion you actually des
 <InArticleAd />
 
 
-A motor turns in one direction without stopping. If the bar it drives cannot go all the way round, the motor stalls against the linkage and something bends or burns. So the first check on any four-bar is whether the driven bar can make a full turn.
-
-The Grashof condition answers this from the lengths alone. If the shortest length plus the longest, $s + l$, is smaller than the sum of the other two, $p + q$, the shortest bar can turn fully (Grashof). If it is larger, no bar can (non-Grashof). You will build four linkages on and near that boundary, predict each one, and check it.
+A motor turns one way without stopping. If the bar it drives cannot go all the way round, the motor stalls against the linkage and something bends or burns. The Grashof condition settles this from the lengths alone, so it is the first check on any four-bar. If the shortest length plus the longest, $s + l$, is smaller than the sum of the other two, $p + q$, the shortest bar can turn fully (Grashof). If it is larger, no bar can (non-Grashof). You will build four linkages on and near that boundary, predict each one, and check it.
 
 :::note[Objective]
 Verify the Grashof condition experimentally by building linkages at and near the Grashof boundary, and observe how the mechanism behavior changes.
@@ -1279,9 +1277,7 @@ What is the maximum input crank length that still allows full rotation if $b=120
 <InArticleAd />
 
 
-Textbook four-bars have both fixed pivots on a horizontal line. Real machines often cannot: a motor mount sits above the frame, or a pivot is moved to clear a bearing housing. Then one pivot is higher than the other by an offset $e$, and a design that was checked for $e = 0$ may no longer behave as planned.
-
-The distance between the pivots is the long side of a right triangle with sides $d$ and $e$, so the effective ground length grows from $d$ to $\sqrt{d^2 + e^2}$. That changes the Grashof sums, the transmission angle and the coupler curve. The ground offset slider of the simulator lets you see by how much.
+Textbook four-bars have both fixed pivots on a horizontal line. Real machines often cannot: a motor mount sits above the frame, or a pivot is moved to clear a bearing housing. Then one pivot is higher than the other by an offset $e$, and a design that was checked for $e = 0$ may no longer behave as planned. The distance between the pivots is the long side of a right triangle with sides $d$ and $e$, so the effective ground length grows from $d$ to $\sqrt{d^2 + e^2}$, which changes the Grashof sums, the transmission angle and the coupler curve. The ground offset slider shows by how much.
 
 :::note[Objective]
 Quantify how vertical ground offset changes the effective ground length, Grashof classification, follower oscillation, and transmission angle quality for the same set of link lengths.

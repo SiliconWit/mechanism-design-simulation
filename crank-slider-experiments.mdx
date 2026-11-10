@@ -118,7 +118,7 @@ A slider-crank lives in engines, pumps, and compressors, and it fails in known w
 <InArticleAd />
 
 
-The bearings of a piston machine must carry the force that stops the piston and sends it back at each end of the stroke. If you assume that the piston moves like a sine wave, you expect the same force at both ends, and for a rod three times the crank you are wrong by a third at each end. This experiment measures the real motion and builds the reference for all the later experiments.
+The bearings of a piston machine must carry the force that stops the piston and sends it back at each end of the stroke. A sine-wave model gives the same force at both ends; for a rod three times the crank it is wrong by a third at each end. This experiment measures the real motion and is the reference for all later experiments.
 
 The slider position is the sum of two lengths measured along the slider path: the part of the crank, $r\cos\theta$, and the part of the rod, which Pythagoras gives from the rod length $l$ and the height of the crank end, $r\sin\theta$:
 
@@ -262,7 +262,7 @@ print(f"Position at 90 deg: {x_anal[90]:.2f} mm")
 <InArticleAd />
 
 
-A shaper machine cuts metal on the forward stroke and returns the tool on the backward stroke. The return stroke does no useful work, so engineers want it to be faster: less idle time means higher productivity. But how do you make one direction faster than the other when the crank rotates at constant speed? The answer is offset. When the slider path is moved away from the crank pivot, the two dead centers are no longer half a turn apart, so the crank spends more of its turn on one stroke than on the other. The quick-return ratio is the longer of those two crank angles divided by the shorter.
+A shaper machine cuts metal on the forward stroke and returns the tool on the backward stroke. The return stroke does no useful work, so engineers want it faster: less idle time, higher productivity. With the crank at constant speed, offset does it. When the slider path is moved away from the crank pivot, the two dead centers are no longer half a turn apart, so the crank spends more of its turn on one stroke than on the other. The quick-return ratio is the longer of those two crank angles divided by the shorter.
 
 :::note[Objective]
 Observe how offset creates asymmetric motion and quantify the quick-return ratio that determines shaper and press productivity.
@@ -581,7 +581,7 @@ For the mechanism to work at all angles, what must be true about the term under 
 <InArticleAd />
 
 
-A piston engine that stops with its crank and rod in one line cannot be started by pushing on the piston: the push goes straight through the pivot and turns nothing. The same position lets a press squeeze with a very large force from a small motor. These positions are the dead centers. There the slider velocity is zero and the mechanical advantage (slider force for each unit of crank torque) grows without limit. A designer must know which machines should work at a dead center and which must never stop there.
+A piston engine that stops with its crank and rod in one line cannot be started by pushing on the piston: the push goes straight through the pivot and turns nothing, as a push along a door toward its hinge does not swing it. The same position lets a press squeeze with a very large force from a small motor. At these dead centers the slider velocity is zero and the mechanical advantage (slider force for each unit of crank torque) grows without limit. A designer must know which machines should work at a dead center and which must never stop there.
 
 :::note[Objective]
 Observe the dead center singularities in velocity, MA, and torque, and understand why machines exploit or avoid these positions.
