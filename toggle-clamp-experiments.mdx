@@ -89,7 +89,7 @@ A closed clamp holds stored force, and a handle released near centre can fly bac
 ---
 
 :::tip[Instrument it]
-A toggle clamp holds by going over-centre, but its grip fades as the pads and pivots wear, and a clamp that has quietly gone slack lets bad parts through a line. Measure the real clamping force with a load cell or thin-film force sensor at the pad, or a strain gauge on the clamp arm. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads it, and on a small board it can [log](/education/iot-systems/) the force every cycle and [alert on a weak clamp](https://siliconwit.io) before the defects reach your customer.
+A toggle clamp holds by going over-centre, but its grip fades as the pads and pivots wear, and a clamp that has quietly gone slack lets bad parts through a line. Measure the real clamping force with a load cell or thin-film force sensor at the pad, or a strain gauge on the clamp arm. An [ESP32 or STM32](/education/sensor-actuator-interfacing-stm32/) reads it, and on a small board it can [log](/education/iot-systems/) the force every cycle to a broker you run, or to [siliconwit.io](https://siliconwit.io), our monitoring service, which keeps the record your customer can check and alerts you to a weak clamp before the defects reach them; it works with any MQTT client.
 :::
 
 ## Experiment 1: Top-Dead-Centre and Self-Locking
